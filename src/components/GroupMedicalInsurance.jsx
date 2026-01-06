@@ -62,6 +62,48 @@ const PROVIDER_OPTIONS = [
   'DNI - Al Madallah'
 ];
 
+// Custom Companies Storage Key
+const CUSTOM_COMPANIES_STORAGE_KEY = 'gmi_custom_companies';
+
+// Load custom companies from localStorage
+const loadCustomCompanies = () => {
+  try {
+    const stored = localStorage.getItem(CUSTOM_COMPANIES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error loading custom companies:', error);
+    return [];
+  }
+};
+
+// Save custom companies to localStorage
+const saveCustomCompanies = (companies) => {
+  try {
+    localStorage.setItem(CUSTOM_COMPANIES_STORAGE_KEY, JSON.stringify(companies));
+  } catch (error) {
+    console.error('Error saving custom companies:', error);
+  }
+};
+
+// Default template fields for custom companies
+const CUSTOM_COMPANY_DEFAULT_TEMPLATE = {
+  planName: 'Custom Plan',
+  annualLimit: 'AED 150,000',
+  geographicalScope: 'UAE',
+  network: 'Network Name',
+  accessForOP: 'Clinics & Medical Centers',
+  referralProcedure: 'GP referral to SP',
+  ipCoinsurance: 'Covered with 20% Co-Pay',
+  deductibleConsultation: 'Covered with 20% Co-Pay',
+  opCoinsurance: 'Covered with 20% Co-Pay',
+  pharmacyLimit: 'Covered up to AED 2,500',
+  pharmacyCoinsurance: 'Covered with 30% Co-Pay',
+  physiotherapySessions: '6 Sessions',
+  maternity: 'As per Standard DHA',
+  dentalDiscounts: 'Yes',
+  opticalDiscount: 'Yes'
+};
+
 // SME Constants
 const AREA_OF_COVER_OPTIONS = ['UAE', 'GCC', 'ISC', 'Arab countries', 'South East Asia', 'Indian Sub Continent','Worldwide','Worldwide(Excluding USA & CANADA)', 'Other','UAE only',
   'UAE, ISC and SEA at R&C of UAE',
@@ -2589,11 +2631,221 @@ const BenefitSectionTable = ({
 // ============================================================================
 // SECTION 3: REUSABLE COMPONENTS - UPDATED DHA ENHANCED SELECTOR
 // ============================================================================
+
+// Custom Company Manager Modal Component
+const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
+  const [companyName, setCompanyName] = useState('');
+  const [tpaName, setTpaName] = useState('');
+  const [templateFields, setTemplateFields] = useState({ ...CUSTOM_COMPANY_DEFAULT_TEMPLATE });
+  const [existingCompanies, setExistingCompanies] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setExistingCompanies(loadCustomCompanies());
+    }
+  }, [isOpen]);
+
+  const handleFieldChange = (key, value) => {
+    setTemplateFields(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSaveCompany = () => {
+    if (!companyName.trim()) {
+      alert('Please enter a company name');
+      return;
+    }
+
+    const newCompany = {
+      id: Date.now(),
+      name: companyName.trim(),
+      tpa: tpaName.trim() || 'Custom TPA',
+      template: { ...templateFields, planName: templateFields.planName || `${companyName.trim()} Plan` },
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedCompanies = [...existingCompanies, newCompany];
+    saveCustomCompanies(updatedCompanies);
+    setExistingCompanies(updatedCompanies);
+    
+    // Reset form
+    setCompanyName('');
+    setTpaName('');
+    setTemplateFields({ ...CUSTOM_COMPANY_DEFAULT_TEMPLATE });
+    
+    if (onCompanyAdded) {
+      onCompanyAdded(newCompany);
+    }
+    
+    alert(`✅ Company "${newCompany.name}" added successfully! It will now appear in the provider list.`);
+  };
+
+  const handleDeleteCompany = (companyId) => {
+    const updatedCompanies = existingCompanies.filter(c => c.id !== companyId);
+    saveCustomCompanies(updatedCompanies);
+    setExistingCompanies(updatedCompanies);
+    setShowDeleteConfirm(null);
+    alert('✅ Company deleted successfully!');
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+      <div className="bg-white rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-purple-800">➕ Add Custom Insurance Company</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Existing Custom Companies */}
+        {existingCompanies.length > 0 && (
+          <div className="mb-6 bg-gray-50 border-2 border-gray-200 rounded-lg p-4">
+            <h3 className="font-bold text-gray-700 mb-3">📋 Your Custom Companies ({existingCompanies.length})</h3>
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {existingCompanies.map(company => (
+                <div key={company.id} className="flex justify-between items-center bg-white p-2 rounded border border-gray-200">
+                  <div>
+                    <span className="font-semibold text-purple-700">{company.name}</span>
+                    <span className="text-xs text-gray-500 ml-2">TPA: {company.tpa}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    {showDeleteConfirm === company.id ? (
+                      <>
+                        <button
+                          onClick={() => handleDeleteCompany(company.id)}
+                          className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-700"
+                        >
+                          Confirm Delete
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(null)}
+                          className="bg-gray-400 text-white px-2 py-1 rounded text-xs font-bold hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setShowDeleteConfirm(company.id)}
+                        className="bg-red-500 text-white px-2 py-1 rounded text-xs font-bold hover:bg-red-600"
+                      >
+                        🗑️ Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Add New Company Form */}
+        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4">
+          <h3 className="font-bold text-purple-800 mb-4">🏢 New Company Details</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Insurance Company*</label>
+              <input
+                type="text"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                className="w-full p-2 border-2 border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g., ABC Insurance Company"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">TPA Name</label>
+              <input
+                type="text"
+                value={tpaName}
+                onChange={(e) => setTpaName(e.target.value)}
+                className="w-full p-2 border-2 border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                placeholder="e.g., NextCare, ECare, Al Madallah"
+              />
+            </div>
+          </div>
+
+          <h4 className="font-bold text-purple-700 mb-3">📝 Default Template Fields (Editable)</h4>
+          <p className="text-xs text-gray-600 mb-3">Set default values for this company. You can modify these when creating a plan.</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {Object.entries(templateFields).map(([key, value]) => {
+              const label = key
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .replace('Ip', 'IP')
+                .replace('Op', 'OP')
+                .trim();
+              
+              const isLongField = ['geographicalScope', 'accessForOP'].includes(key);
+              
+              return (
+                <div key={key} className={isLongField ? 'md:col-span-2' : ''}>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+                  {isLongField ? (
+                    <textarea
+                      value={value}
+                      onChange={(e) => handleFieldChange(key, e.target.value)}
+                      className="w-full p-2 border border-purple-200 rounded text-xs focus:ring-1 focus:ring-purple-500"
+                      rows="2"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={value}
+                      onChange={(e) => handleFieldChange(key, e.target.value)}
+                      className="w-full p-2 border border-purple-200 rounded text-xs focus:ring-1 focus:ring-purple-500"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={handleSaveCompany}
+            className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-3 rounded-lg font-bold hover:from-purple-700 hover:to-indigo-700 transition"
+          >
+            💾 Save Company
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-gray-500 text-white p-3 rounded-lg font-bold hover:bg-gray-600 transition"
+          >
+            ✗ Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const DHAEnhancedSelector = ({ onTemplateSelect, onClose }) => {
   const [selectedProvider, setSelectedProvider] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [editedTemplate, setEditedTemplate] = useState(null);
   const [manualEntryMode, setManualEntryMode] = useState(false);
+  const [showCustomCompanyManager, setShowCustomCompanyManager] = useState(false);
+  const [customCompanies, setCustomCompanies] = useState([]);
+
+  // Load custom companies on mount
+  useEffect(() => {
+    setCustomCompanies(loadCustomCompanies());
+  }, []);
+
+  // Refresh custom companies when manager closes
+  const handleCustomCompanyAdded = (newCompany) => {
+    setCustomCompanies(loadCustomCompanies());
+  };
 
   // Define the available DHA Enhanced providers
  const DHA_ENHANCED_PROVIDER_OPTIONS = [
@@ -2608,6 +2860,23 @@ const DHAEnhancedSelector = ({ onTemplateSelect, onClose }) => {
   'National General Insurance',
   'Liva Insurance BSC'
 ];
+
+  // Combine standard providers with custom companies
+  const getAllProviderOptions = () => {
+    const customProviderNames = customCompanies.map(c => `⭐ ${c.name}`);
+    return [...DHA_ENHANCED_PROVIDER_OPTIONS, ...customProviderNames];
+  };
+
+  // Check if provider is a custom company
+  const isCustomCompany = (providerName) => {
+    return providerName && providerName.startsWith('⭐ ');
+  };
+
+  // Get custom company by display name
+  const getCustomCompanyByDisplayName = (displayName) => {
+    const actualName = displayName.replace('⭐ ', '');
+    return customCompanies.find(c => c.name === actualName);
+  };
 
   // ONLY providers that actually have templates
    const DETAILED_TEMPLATE_PROVIDERS = [
@@ -2736,7 +3005,12 @@ const handleTemplateSelect = (templateName) => {
     delete cleanedTemplate.dental;
     delete cleanedTemplate.psychiatry;
 
-    onTemplateSelect(cleanedTemplate, selectedProvider);
+    // For custom companies, pass the actual company name (without the star prefix)
+    const actualProviderName = isCustomCompany(selectedProvider) 
+      ? selectedProvider.replace('⭐ ', '') 
+      : selectedProvider;
+
+    onTemplateSelect(cleanedTemplate, actualProviderName, isCustomCompany(selectedProvider));
   };
 
   // Handle provider change
@@ -2744,6 +3018,24 @@ const handleProviderChange = (provider) => {
   setSelectedProvider(provider);
   setSelectedTemplate('');
   setEditedTemplate(null);
+  
+  // Check if it's a custom company
+  if (isCustomCompany(provider)) {
+    const customCompany = getCustomCompanyByDisplayName(provider);
+    if (customCompany && customCompany.template) {
+      setManualEntryMode(false);
+      setSelectedTemplate('Custom Plan');
+      // Format all values in the template
+      const formattedTemplate = {};
+      Object.entries(customCompany.template).forEach(([key, value]) => {
+        if (key === 'dental' || key === 'psychiatry') return;
+        formattedTemplate[key] = typeof value === 'string' ? formatFieldValue(value) : value;
+      });
+      setEditedTemplate(formattedTemplate);
+    }
+    return;
+  }
+  
   setManualEntryMode(!DETAILED_TEMPLATE_PROVIDERS.includes(provider) && !SIMPLIFIED_TEMPLATE_PROVIDERS.includes(provider));
   
   if (SIMPLIFIED_TEMPLATE_PROVIDERS.includes(provider)) {
@@ -2779,17 +3071,39 @@ const handleProviderChange = (provider) => {
         
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Select Provider</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-bold text-gray-700">Select Provider</label>
+              <button
+                onClick={() => setShowCustomCompanyManager(true)}
+                className="bg-purple-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-purple-700 transition flex items-center gap-1"
+              >
+                ➕ Add Custom Company
+              </button>
+            </div>
             <select
               value={selectedProvider}
               onChange={(e) => handleProviderChange(e.target.value)}
               className="w-full p-3 border-2 border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
             >
               <option value="">-- Choose Provider --</option>
-              {DHA_ENHANCED_PROVIDER_OPTIONS.map(provider => (
-                <option key={provider} value={provider}>{provider}</option>
-              ))}
+              <optgroup label="Standard Providers">
+                {DHA_ENHANCED_PROVIDER_OPTIONS.map(provider => (
+                  <option key={provider} value={provider}>{provider}</option>
+                ))}
+              </optgroup>
+              {customCompanies.length > 0 && (
+                <optgroup label="⭐ Custom Companies">
+                  {customCompanies.map(company => (
+                    <option key={company.id} value={`⭐ ${company.name}`}>⭐ {company.name}</option>
+                  ))}
+                </optgroup>
+              )}
             </select>
+            {customCompanies.length > 0 && (
+              <p className="text-xs text-purple-600 mt-1">
+                ⭐ = Custom companies you've added. These are saved permanently.
+              </p>
+            )}
           </div>
 
           {/* Template Selection Dropdown - ONLY for detailed template providers */}
@@ -2809,8 +3123,63 @@ const handleProviderChange = (provider) => {
             </div>
           )}
 
+          {/* Show templates for custom companies */}
+          {selectedProvider && isCustomCompany(selectedProvider) && editedTemplate && (
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg p-4">
+              <h3 className="font-bold text-purple-800 mb-3">📋 Custom Company Template: {selectedProvider.replace('⭐ ', '')}</h3>
+              <p className="text-xs text-gray-600 mb-3">Edit the template fields below. Click <span className="text-red-600 font-bold">−</span> to remove a field from comparison.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                {Object.entries(editedTemplate).map(([key, value]) => {
+                  if (key.includes('Premium') || key.includes('premium')) return null;
+                  if (key === 'dental' || key === 'psychiatry' || key === 'groupSize') return null;
+                  
+                  const label = key
+                    .replace(/([A-Z])/g, ' $1')
+                    .replace(/^./, str => str.toUpperCase())
+                    .replace('Ip', 'IP')
+                    .replace('Op', 'OP')
+                    .replace('T P A', 'TPA')
+                    .trim();
+                    
+                  return (
+                    <div key={key} className="space-y-1">
+                      <div className="flex justify-between items-center">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          {label}:
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditedTemplate(prev => {
+                              const newTemplate = { ...prev };
+                              delete newTemplate[key];
+                              return newTemplate;
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-800 text-lg font-bold px-2 py-0 leading-none hover:bg-red-100 rounded"
+                          title={`Remove ${label}`}
+                        >
+                          −
+                        </button>
+                      </div>
+                      <textarea
+                        value={String(value)}
+                        onChange={(e) => handleTemplateFieldChange(key, e.target.value)}
+                        className="w-full p-2 border border-purple-300 rounded text-xs focus:ring-1 focus:ring-purple-500"
+                        rows={key.includes('geographicalScope') || key.includes('accessForOP') ? 3 : 2}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-3 text-xs text-purple-700 bg-purple-100 p-2 rounded border border-purple-200">
+                💡 This is a custom company template. Modify as needed and click "Apply Template" below.
+              </div>
+            </div>
+          )}
+
           {/* Show templates for providers with templates */}
-{selectedProvider && (DETAILED_TEMPLATE_PROVIDERS.includes(selectedProvider) || SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider)) && editedTemplate && (
+{selectedProvider && !isCustomCompany(selectedProvider) && (DETAILED_TEMPLATE_PROVIDERS.includes(selectedProvider) || SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider)) && editedTemplate && (
   <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-lg p-4">
     <h3 className="font-bold text-green-800 mb-3">📋 Editable Template Preview: {selectedTemplate || 'Basic EBP'}</h3>
     <p className="text-xs text-gray-600 mb-3">Click <span className="text-red-600 font-bold">−</span> to remove a field from comparison.</p>
@@ -2911,7 +3280,7 @@ const handleProviderChange = (provider) => {
 )}
 
            {/* Show manual entry form for providers without ANY templates (shouldn't happen with current setup) */}
-          {selectedProvider && !DETAILED_TEMPLATE_PROVIDERS.includes(selectedProvider) && !SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider) && (
+          {selectedProvider && !isCustomCompany(selectedProvider) && !DETAILED_TEMPLATE_PROVIDERS.includes(selectedProvider) && !SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider) && (
             <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-lg p-4">
               <h3 className="font-bold text-blue-800 mb-3">📝 Manual Entry Required</h3>
               <p className="text-sm text-blue-700 mb-4">
@@ -2957,14 +3326,14 @@ const handleProviderChange = (provider) => {
         <div className="flex gap-3 mt-6">
           <button
             onClick={handleApplyTemplate}
-          disabled={!selectedProvider || (!manualEntryMode && !selectedTemplate && !SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider))}
+          disabled={!selectedProvider || (!manualEntryMode && !selectedTemplate && !SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider) && !isCustomCompany(selectedProvider))}
             className={`flex-1 p-3 rounded-lg font-bold transition ${
-              selectedProvider && (manualEntryMode || selectedTemplate)
+              selectedProvider && (manualEntryMode || selectedTemplate || isCustomCompany(selectedProvider))
                 ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-                 {manualEntryMode ? '✅ Apply Manual Plan' : (SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider) ? '✅ Apply Basic Template' : '✅ Apply Template')}
+                 {isCustomCompany(selectedProvider) ? '✅ Apply Custom Company' : (manualEntryMode ? '✅ Apply Manual Plan' : (SIMPLIFIED_TEMPLATE_PROVIDERS.includes(selectedProvider) ? '✅ Apply Basic Template' : '✅ Apply Template'))}
           </button>
           <button
             onClick={onClose}
@@ -2974,6 +3343,16 @@ const handleProviderChange = (provider) => {
           </button>
         </div>
       </div>
+      
+      {/* Custom Company Manager Modal */}
+      <CustomCompanyManager
+        isOpen={showCustomCompanyManager}
+        onClose={() => {
+          setShowCustomCompanyManager(false);
+          setCustomCompanies(loadCustomCompanies()); // Refresh list
+        }}
+        onCompanyAdded={handleCustomCompanyAdded}
+      />
     </div>
   );
 };
@@ -3254,7 +3633,7 @@ function PlanGenerator() {
     }));
   };
 
-  const handleTemplateSelect = (template, providerName) => {
+  const handleTemplateSelect = (template, providerName, isCustom = false) => {
     // Use CAT A/CAT B for DHA Enhanced plans
     const categories = template.lsbPremium ? ['CAT A', 'CAT B'] : ['CAT A'];
     
@@ -3300,7 +3679,15 @@ function PlanGenerator() {
     // AUTO-SET TPA based on provider
     // AUTO-SET TPA based on provider
 let tpaValue = '';
-if (providerName === 'Takaful Emarat - ECare') {
+
+// For custom companies, check if they have a TPA set
+if (isCustom) {
+  const customCompanies = loadCustomCompanies();
+  const customCompany = customCompanies.find(c => c.name === providerName);
+  if (customCompany && customCompany.tpa) {
+    tpaValue = customCompany.tpa;
+  }
+} else if (providerName === 'Takaful Emarat - ECare') {
   tpaValue = 'ECARE';
 } else if (providerName === 'Qatar Insurance - Al Madallah') {
   tpaValue = 'AL MADALLAH';
@@ -3315,9 +3702,12 @@ if (providerName === 'Takaful Emarat - ECare') {
 }
 // Add TPA for other simplified template providers if needed
 
+    // For custom companies, use the company name directly; for standard providers, use mapping
+    const displayProviderName = isCustom ? providerName : (DHA_ENHANCED_PROVIDERS[providerName] || providerName);
+
     const newPlan = {
       ...currentPlan,
-      providerName: DHA_ENHANCED_PROVIDERS[providerName],
+      providerName: displayProviderName,
       planType: 'ENHANCED_BASIC',
       selectedCategories: categories,
       categoriesData: categoriesData,
@@ -3329,19 +3719,26 @@ if (providerName === 'Takaful Emarat - ECare') {
       catBMembers: template.hsbPremium ? 1 : 0,
       dubaiMembers: 1,
       northernEmiratesMembers: 0,
-      policyFee: 0
+      policyFee: 0,
+      isCustomCompany: isCustom
     };
 
     // Update company info with auto-generated TPA
-    setCompanyInfo(prev => ({
-      ...prev,
-      tpa: tpaValue
-    }));
+    if (tpaValue) {
+      setCompanyInfo(prev => ({
+        ...prev,
+        tpa: tpaValue
+      }));
+    }
 
     setCurrentPlan(newPlan);
     setShowDHAEnhancedSelector(false);
     
-    alert(`✅ Template "${template.planName}" loaded successfully!\n\n• Provider: ${DHA_ENHANCED_PROVIDERS[providerName]}\n• TPA: ${tpaValue}\n\nAll template details have been auto-populated. You can now review and modify as needed before adding to comparison.`);
+    if (isCustom) {
+      alert(`✅ Custom Company Template loaded successfully!\n\n• Provider: ${providerName}\n• TPA: ${tpaValue || 'Not specified'}\n\nAll template details have been auto-populated. You can now review and modify as needed before adding to comparison.`);
+    } else {
+      alert(`✅ Template "${template.planName}" loaded successfully!\n\n• Provider: ${displayProviderName}\n• TPA: ${tpaValue}\n\nAll template details have been auto-populated. You can now review and modify as needed before adding to comparison.`);
+    }
   };
 
   const handlePlanTypeChange = (newPlanType) => {
