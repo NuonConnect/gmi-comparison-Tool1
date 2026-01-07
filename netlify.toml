@@ -1,13 +1,23 @@
 [build]
-  command = "npm run build"
   publish = "dist"
+  command = "npm run build"
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+  directory = "netlify/functions"
+
+# Enable Netlify Blobs
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirects for API routes
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
+# SPA fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
