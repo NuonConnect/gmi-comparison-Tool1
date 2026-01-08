@@ -2377,11 +2377,7 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.inpatientCopay) ? `
-                <tr>
-                    <td class="benefit-name">Inpatient Copay</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inpatientCopay')}</td>`).join('')}
-                </tr>
-                ` : ''}
+                
                 ${plans.some(plan => plan.categoriesData?.diagnosticTests) ? `
                 <tr>
                     <td class="benefit-name">Diagnostic Tests & Procedures</td>
@@ -2398,6 +2394,11 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 <tr>
                     <td class="benefit-name">Consultant's, Surgeon's and Anesthetist's Fees</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'consultantFees')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                <tr>
+                    <td class="benefit-name">Inpatient Copay</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inpatientCopay')}</td>`).join('')}
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.inpatientOutNetwork) ? `
