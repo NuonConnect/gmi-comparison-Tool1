@@ -172,17 +172,20 @@ const CUSTOM_COMPANY_DEFAULT_TEMPLATE = {
   
   // Inpatient Benefits
   roomType: 'PRIVATE',
-  inpatientCopay: '',
   diagnosticTests: '',
   drugsMedicines: '',
   consultantFees: '',
+  organTransplant: '',
+  kidneyDialysis: '',
+  inpatientCopay: '',
   
   // Outpatient Benefits
+  referralType: 'Direct Specialist Access',
   outpatientConsultation: '',
-  outpatientCopay: 'Covered',
   diagnosticLabs: 'Covered',
   pharmacyLimit: '',
   pharmacyCopay: 'Covered',
+  medicineType: 'Formulary',
   prescribedPhysiotherapy: '',
   
   // Other Benefits
@@ -2269,6 +2272,12 @@ tr:not(.section-header) td:first-child {
                     <td class="benefit-name">TPA</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${companyInfo.tpa === 'Other' && companyInfo.tpaManual ? companyInfo.tpaManual : companyInfo.tpa}</td>`).join('')}
                 </tr>
+                ${!hasBasicPlan && !hasEnhancedPlan ? `
+                <tr>
+                    <td class="benefit-name">Categories</td>
+                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.selectedCategories?.join(', ') || 'Not specified'}</td>`).join('')}
+                </tr>
+                ` : ''}
                 <tr>
                     <td class="benefit-name">Network</td>
                     ${plans.map(plan => {
@@ -2277,12 +2286,6 @@ tr:not(.section-header) td:first-child {
                       return `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${displayText}</td>`;
                     }).join('')}
                 </tr>
-                ${!hasBasicPlan && !hasEnhancedPlan ? `
-                <tr>
-                    <td class="benefit-name">Categories</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.selectedCategories?.join(', ') || 'Not specified'}</td>`).join('')}
-                </tr>
-                ` : ''}
                 <tr>
                     <td class="benefit-name">Area of Cover</td>
                     ${plans.map(plan => {
@@ -2343,6 +2346,36 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'roomType')}</td>`).join('')}
                 </tr>
                 ` : ''}
+                ${plans.some(plan => plan.categoriesData?.diagnosticTests) ? `
+                <tr>
+                    <td class="benefit-name">Diagnostic Tests & Procedures</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'diagnosticTests')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.drugsMedicines) ? `
+                <tr>
+                    <td class="benefit-name">Drugs and Medicines</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'drugsMedicines')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.consultantFees) ? `
+                <tr>
+                    <td class="benefit-name">Consultant's, Surgeon's and Anesthetist's Fees</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'consultantFees')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.organTransplant) ? `
+                <tr>
+                    <td class="benefit-name">Organ Transplant</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'organTransplant')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.kidneyDialysis) ? `
+                <tr>
+                    <td class="benefit-name">Kidney Dialysis</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'kidneyDialysis')}</td>`).join('')}
+                </tr>
+                ` : ''}
                 ${plans.some(plan => plan.categoriesData?.inpatientCopay) ? `
                 <tr>
                     <td class="benefit-name">Inpatient Copay</td>
@@ -2377,22 +2410,40 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 <tr class="section-header">
                     <td colspan="${plans.length + 1}">OUTPATIENT BENEFITS</td>
                 </tr>
+                ${plans.some(plan => plan.categoriesData?.referralType) ? `
+                <tr>
+                    <td class="benefit-name">Referral Type</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'referralType')}</td>`).join('')}
+                </tr>
+                ` : ''}
                 ${plans.some(plan => plan.categoriesData?.outpatientConsultation) ? `
                 <tr>
                     <td class="benefit-name">Outpatient Consultation</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'outpatientConsultation')}</td>`).join('')}
                 </tr>
                 ` : ''}
-                ${plans.some(plan => plan.categoriesData?.outpatientCopay) ? `
-                <tr>
-                    <td class="benefit-name">Outpatient Copay</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'outpatientCopay')}</td>`).join('')}
-                </tr>
-                ` : ''}
                 ${plans.some(plan => plan.categoriesData?.diagnosticLabs) ? `
                 <tr>
                     <td class="benefit-name">Diagnostic Tests and Labs</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'diagnosticLabs')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.pharmacyLimit) ? `
+                <tr>
+                    <td class="benefit-name">Pharmacy Limit</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'pharmacyLimit')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.pharmacyCopay) ? `
+                <tr>
+                    <td class="benefit-name">Pharmacy Copay</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'pharmacyCopay')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.medicineType) ? `
+                <tr>
+                    <td class="benefit-name">Medicine Type</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'medicineType')}</td>`).join('')}
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? `
@@ -2520,28 +2571,28 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.catBMembers}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">${getPremiumLabelA()} Premium</td>
+                    <td class="benefit-name">Average Premium Per Person_${getPremiumLabelA()}</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">${getPremiumLabelB()} Premium</td>
+                    <td class="benefit-name">Average Premium Per Person_${getPremiumLabelB()}</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">${getPremiumLabelA()} Total</td>
+                    <td class="benefit-name">Total Premium_${getPremiumLabelA()}</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.catAMembers * plan.catAPremium).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">${getPremiumLabelB()} Total</td>
+                    <td class="benefit-name">Total Premium_${getPremiumLabelB()}</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.catBMembers * plan.catBPremium).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-                <tr>
-                    <td class="benefit-name">Total Members</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
+         <tr style="background-color: #c7d2fe;">
+                    <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
                 </tr>
-                <tr>
-                    <td class="benefit-name">Total Premium</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                <tr style="background-color: #c7d2fe;">
+                    <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Premium</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">PSP Fund (37/member)</td>
@@ -2559,9 +2610,9 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     <td class="benefit-name">VAT (5%)</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.vat.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-                <tr class="grand-total-row">
-                    <td style="font-size: 11px;">GRAND TOTAL</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+          <tr class="grand-total-row" style="background-color: #a5b4fc;">
+                    <td style="font-size: 11px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;">GRAND TOTAL</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
             </tbody>
         </table>
@@ -2922,15 +2973,18 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
                 areaOfCover: 'Area of Cover',
                 preExistingCondition: 'Pre Existing Condition',
                 roomType: 'Room Type',
-                inpatientCopay: 'Inpatient Copay',
                 diagnosticTests: 'Diagnostic Tests & Procedures',
                 drugsMedicines: 'Drugs and Medicines',
                 consultantFees: "Consultant's, Surgeon's and Anesthetist's Fees",
+                organTransplant: 'Organ Transplant',
+                kidneyDialysis: 'Kidney Dialysis',
+                inpatientCopay: 'Inpatient Copay',
+                referralType: 'Referral Type',
                 outpatientConsultation: 'Outpatient Consultation',
-                outpatientCopay: 'Outpatient Copay',
                 diagnosticLabs: 'Diagnostic Tests and Labs',
                 pharmacyLimit: 'Pharmacy Limit',
                 pharmacyCopay: 'Pharmacy Copay',
+                medicineType: 'Medicine Type',
                 prescribedPhysiotherapy: 'Prescribed Physiotherapy',
                 maternity: 'Maternity',
                 routineDental: 'Dental Benefits',
@@ -2945,7 +2999,7 @@ const CustomCompanyManager = ({ isOpen, onClose, onCompanyAdded }) => {
                 .replace(/^./, str => str.toUpperCase())
                 .trim();
               
-              const isLongField = ['areaOfCover', 'preExistingCondition', 'inpatientCopay', 'consultantFees', 'outpatientConsultation', 'prescribedPhysiotherapy', 'maternity'].includes(key);
+              const isLongField = ['areaOfCover', 'preExistingCondition', 'consultantFees', 'organTransplant', 'kidneyDialysis', 'inpatientCopay', 'outpatientConsultation', 'prescribedPhysiotherapy', 'maternity'].includes(key);
               
               return (
                 <div key={key} className={isLongField ? 'md:col-span-2' : ''}>
@@ -4468,22 +4522,25 @@ const handleBackToNormal = () => {
     { field: 'preExistingCondition', label: 'Pre Existing Condition', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
   ];
 
-  // UPDATED: Room Type = dropdown ONLY (no textarea), others = textarea ONLY (no dropdown)
+  // UPDATED: Inpatient benefits - moved IP Copay to end, added Organ Transplant and Kidney Dialysis
   const inpatientBenefits = [
     { field: 'roomType', label: 'Room Type', options: ROOM_TYPE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
-    { field: 'inpatientCopay', label: 'Inpatient Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'diagnosticTests', label: 'Diagnostic Tests & Procedures', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'drugsMedicines', label: 'Drugs and Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'consultantFees', label: "Consultant's, Surgeon's and Anesthetist's Fees", options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
+    { field: 'consultantFees', label: "Consultant's, Surgeon's and Anesthetist's Fees", options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'organTransplant', label: 'Organ Transplant', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'kidneyDialysis', label: 'Kidney Dialysis', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+    { field: 'inpatientCopay', label: 'Inpatient Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
   ];
 
-  // UPDATED: Outpatient Copay, Diagnostic Tests and Labs, Pharmacy Copay = dropdown ONLY (no textarea)
+  // UPDATED: Removed Outpatient Copay, added Referral Type before Outpatient Consultation, added Medicine Type after Pharmacy Copay
   const outpatientBenefits = [
+    { field: 'referralType', label: 'Referral Type', options: ['Direct Specialist Access', 'With GP referral'], showMainValue: true, hasTextArea: false, canHighlight: true },
     { field: 'outpatientConsultation', label: 'Outpatient Consultation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'outpatientCopay', label: 'Outpatient Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
     { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
     { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+    { field: 'medicineType', label: 'Medicine Type', options: ['Formulary', 'Branded'], showMainValue: true, hasTextArea: false, canHighlight: true },
     { field: 'prescribedPhysiotherapy', label: 'Prescribed Physiotherapy', options: PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true }
   ];
 
@@ -4754,7 +4811,8 @@ const showEditableEnhancedBasicFields = () => {
         type="radio"
         name="planType"
         checked={planType === 'BASIC'}
-        onChange={() => handlePlanTypeChange('BASIC')}
+        onClick={() => handlePlanTypeChange('BASIC')}
+        onChange={() => {}}
         className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
       />
       <span className="text-sm font-bold text-indigo-700">BASIC</span>
@@ -4765,7 +4823,8 @@ const showEditableEnhancedBasicFields = () => {
         type="radio"
         name="planType"
         checked={planType === 'ENHANCED_BASIC'}
-        onChange={() => handlePlanTypeChange('ENHANCED_BASIC')}
+        onClick={() => handlePlanTypeChange('ENHANCED_BASIC')}
+        onChange={() => {}}
         className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
       />
       <span className="text-sm font-bold text-indigo-700">ENHANCED BASIC (DHA Enhanced)</span>
@@ -4776,7 +4835,8 @@ const showEditableEnhancedBasicFields = () => {
         type="radio"
         name="planType"
         checked={planType === 'SME'}
-        onChange={() => handlePlanTypeChange('SME')}
+        onClick={() => handlePlanTypeChange('SME')}
+        onChange={() => {}}
         className="w-4 h-4 text-indigo-600 focus:ring-2 focus:ring-indigo-500"
       />
       <span className="text-sm font-bold text-indigo-700">SME</span>
@@ -5184,50 +5244,17 @@ const showEditableEnhancedBasicFields = () => {
             <h3 className="font-bold text-yellow-900 mb-3 text-sm">💰 PREMIUM DETAILS</h3>
             
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  {planType === 'BASIC' ? 'LSB Members' : (planType === 'ENHANCED_BASIC' ? 'CAT A Members' : 'Cat A Members')}
-                </label>
-                <input
-                  type="number"
-                  value={currentPlan.catAMembers || ''}
-                  onChange={(e) => handleNumberChange('catAMembers', parseInt(e.target.value) || 0)}
-                  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1">
-                  {planType === 'BASIC' ? 'LSB Premium (AED)' : (planType === 'ENHANCED_BASIC' ? 'CAT A Premium (AED)' : 'Cat A Premium (AED)')}
-                </label>
-                <input
-                  type="text"
-                  value={currentPlan.catAPremium ? currentPlan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/,/g, '');
-                    if (!isNaN(value) && value !== '' && value !== '.') {
-                      handleNumberChange('catAPremium', parseFloat(value));
-                    } else if (value === '' || value === '.') {
-                      handleNumberChange('catAPremium', 0);
-                    }
-                  }}
-                  className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                  placeholder="0"
-                />
-              </div>
-
-              {/* Conditionally show CAT B fields only for ENHANCED_BASIC with dual premiums */}
-              {(planType === 'ENHANCED_BASIC' && currentPlan.catBPremium > 0) || planType !== 'ENHANCED_BASIC' ? (
+              {/* For BASIC and ENHANCED_BASIC - show LSB/HSB or CAT A/B */}
+              {planType !== 'SME' && (
                 <>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
-                      {planType === 'BASIC' ? 'HSB Members' : (planType === 'ENHANCED_BASIC' ? 'CAT B Members' : 'Cat B Members')}
+                      {planType === 'BASIC' ? 'LSB Members' : 'CAT A Members'}
                     </label>
                     <input
                       type="number"
-                      value={currentPlan.catBMembers || ''}
-                      onChange={(e) => handleNumberChange('catBMembers', parseInt(e.target.value) || 0)}
+                      value={currentPlan.catAMembers || ''}
+                      onChange={(e) => handleNumberChange('catAMembers', parseInt(e.target.value) || 0)}
                       className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
                       min="0"
                       placeholder="0"
@@ -5235,84 +5262,198 @@ const showEditableEnhancedBasicFields = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
-                      {planType === 'BASIC' ? 'HSB Premium (AED)' : (planType === 'ENHANCED_BASIC' ? 'CAT B Premium (AED)' : 'Cat B Premium (AED)')}
+                      {planType === 'BASIC' ? 'Average Premium Per Person_LSB (AED)' : 'Average Premium Per Person_CAT A (AED)'}
                     </label>
                     <input
                       type="text"
-                      value={currentPlan.catBPremium ? currentPlan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
+                      value={currentPlan.catAPremium ? currentPlan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
                       onChange={(e) => {
                         const value = e.target.value.replace(/,/g, '');
                         if (!isNaN(value) && value !== '' && value !== '.') {
-                          handleNumberChange('catBPremium', parseFloat(value));
+                          handleNumberChange('catAPremium', parseFloat(value));
                         } else if (value === '' || value === '.') {
-                          handleNumberChange('catBPremium', 0);
+                          handleNumberChange('catAPremium', 0);
                         }
                       }}
                       className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
                       placeholder="0"
                     />
                   </div>
+                  {/* Conditionally show CAT B fields only for ENHANCED_BASIC with dual premiums */}
+                  {(planType === 'ENHANCED_BASIC' && currentPlan.catBPremium > 0) || planType === 'BASIC' ? (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          {planType === 'BASIC' ? 'HSB Members' : 'CAT B Members'}
+                        </label>
+                        <input
+                          type="number"
+                          value={currentPlan.catBMembers || ''}
+                          onChange={(e) => handleNumberChange('catBMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                          {planType === 'BASIC' ? 'Average Premium Per Person_HSB (AED)' : 'Average Premium Per Person_CAT B (AED)'}
+                        </label>
+                        <input
+                          type="text"
+                          value={currentPlan.catBPremium ? currentPlan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, '');
+                            if (!isNaN(value) && value !== '' && value !== '.') {
+                              handleNumberChange('catBPremium', parseFloat(value));
+                            } else if (value === '' || value === '.') {
+                              handleNumberChange('catBPremium', 0);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  ) : null}
                 </>
-              ) : null}
+              )}
 
+              {/* For SME - show only selected categories */}
               {planType === 'SME' && (
                 <>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Cat C Members</label>
-                    <input
-                      type="number"
-                      value={currentPlan.catCMembers || ''}
-                      onChange={(e) => handleNumberChange('catCMembers', parseInt(e.target.value) || 0)}
-                      className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
-                      min="0"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Cat C Premium (AED)</label>
-                    <input
-                      type="text"
-                      value={currentPlan.catCPremium ? currentPlan.catCPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/,/g, '');
-                        if (!isNaN(value) && value !== '' && value !== '.') {
-                          handleNumberChange('catCPremium', parseFloat(value));
-                        } else if (value === '' || value === '.') {
-                          handleNumberChange('catCPremium', 0);
-                        }
-                      }}
-                      className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Cat D Members</label>
-                    <input
-                      type="number"
-                      value={currentPlan.catDMembers || ''}
-                      onChange={(e) => handleNumberChange('catDMembers', parseInt(e.target.value) || 0)}
-                      className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
-                      min="0"
-                      placeholder="0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 mb-1">Cat D Premium (AED)</label>
-                    <input
-                      type="text"
-                      value={currentPlan.catDPremium ? currentPlan.catDPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/,/g, '');
-                        if (!isNaN(value) && value !== '' && value !== '.') {
-                          handleNumberChange('catDPremium', parseFloat(value));
-                        } else if (value === '' || value === '.') {
-                          handleNumberChange('catDPremium', 0);
-                        }
-                      }}
-                      className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
-                      placeholder="0"
-                    />
-                  </div>
+                  {/* Cat A - show only if selected */}
+                  {currentPlan.selectedCategories?.includes('CAT A') && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Cat A Members</label>
+                        <input
+                          type="number"
+                          value={currentPlan.catAMembers || ''}
+                          onChange={(e) => handleNumberChange('catAMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat A (AED)</label>
+                        <input
+                          type="text"
+                          value={currentPlan.catAPremium ? currentPlan.catAPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, '');
+                            if (!isNaN(value) && value !== '' && value !== '.') {
+                              handleNumberChange('catAPremium', parseFloat(value));
+                            } else if (value === '' || value === '.') {
+                              handleNumberChange('catAPremium', 0);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {/* Cat B - show only if selected */}
+                  {currentPlan.selectedCategories?.includes('CAT B') && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Cat B Members</label>
+                        <input
+                          type="number"
+                          value={currentPlan.catBMembers || ''}
+                          onChange={(e) => handleNumberChange('catBMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat B (AED)</label>
+                        <input
+                          type="text"
+                          value={currentPlan.catBPremium ? currentPlan.catBPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, '');
+                            if (!isNaN(value) && value !== '' && value !== '.') {
+                              handleNumberChange('catBPremium', parseFloat(value));
+                            } else if (value === '' || value === '.') {
+                              handleNumberChange('catBPremium', 0);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {/* Cat C - show only if selected */}
+                  {currentPlan.selectedCategories?.includes('CAT C') && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Cat C Members</label>
+                        <input
+                          type="number"
+                          value={currentPlan.catCMembers || ''}
+                          onChange={(e) => handleNumberChange('catCMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat C (AED)</label>
+                        <input
+                          type="text"
+                          value={currentPlan.catCPremium ? currentPlan.catCPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, '');
+                            if (!isNaN(value) && value !== '' && value !== '.') {
+                              handleNumberChange('catCPremium', parseFloat(value));
+                            } else if (value === '' || value === '.') {
+                              handleNumberChange('catCPremium', 0);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  )}
+                  {/* Cat D - show only if selected */}
+                  {currentPlan.selectedCategories?.includes('CAT D') && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Cat D Members</label>
+                        <input
+                          type="number"
+                          value={currentPlan.catDMembers || ''}
+                          onChange={(e) => handleNumberChange('catDMembers', parseInt(e.target.value) || 0)}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 mb-1">Average Premium Per Person_Cat D (AED)</label>
+                        <input
+                          type="text"
+                          value={currentPlan.catDPremium ? currentPlan.catDPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : ''}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, '');
+                            if (!isNaN(value) && value !== '' && value !== '.') {
+                              handleNumberChange('catDPremium', parseFloat(value));
+                            } else if (value === '' || value === '.') {
+                              handleNumberChange('catDPremium', 0);
+                            }
+                          }}
+                          className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                          placeholder="0"
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
