@@ -2594,13 +2594,13 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     <td class="benefit-name">Total Premium_${getPremiumLabelB()}</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.catBMembers * plan.catBPremium).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-                <tr style="background-color: #fef3c7;">
-                    <td class="benefit-name" style="font-weight: bold; background-color: #fbbf24; color: #000;">Total Members</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #fef3c7;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
+             <tr style="background-color: #c7d2fe;">
+                    <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
                 </tr>
-                <tr style="background-color: #fef3c7;">
-                    <td class="benefit-name" style="font-weight: bold; background-color: #fbbf24; color: #000;">Total Premium</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #fef3c7;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                <tr style="background-color: #c7d2fe;">
+                    <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Premium</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">PSP Fund (37/member)</td>
@@ -2618,9 +2618,9 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     <td class="benefit-name">VAT (5%)</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.vat.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
-                <tr class="grand-total-row" style="background-color: #22c55e;">
-                    <td style="font-size: 11px; font-weight: bold; background-color: #16a34a; color: #fff;">GRAND TOTAL</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #22c55e; color: #fff;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+              <tr class="grand-total-row" style="background-color: #a5b4fc;">
+                    <td style="font-size: 11px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;">GRAND TOTAL</td>
+                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #a5b4fc; color: #1e1b4b;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
             </tbody>
         </table>
