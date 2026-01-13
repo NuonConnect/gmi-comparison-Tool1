@@ -299,8 +299,7 @@ const ENHANCED_CUSTOM_NETWORK_OPTIONS = [
   'PCP-C',
   'PCP-RN3',
   'PCP-RN3+DHA-H',
-  'RN3 (OP restricted to Clinics)',
-  'Other'
+  'RN3 (OP restricted to Clinics)'
 ];
 
 // BASIC Plan Default Values for AED 150,000
@@ -2362,24 +2361,18 @@ ${hasEnhancedPlan ? `
 ${plans.some(plan => plan.categoriesData?.planName) ? generateMergedRow('Product Name', 'planName', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.accessForOP) ? generateMergedRow('Access for OP', 'accessForOP', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.referralProcedure) ? generateMergedRow('Referral Procedure', 'referralProcedure', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.intensiveCareUnit) ? generateMergedRow('Intensive Care Unit', 'intensiveCareUnit', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.diagnosticTests) ? generateMergedRow('Diagnostic Tests And Procedures', 'diagnosticTests', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.drugsMedicines) ? generateMergedRow('Drugs and Medicines', 'drugsMedicines', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.doctorSurgeonConsultations) ? generateMergedRow('Doctor, Surgeon & Specialist Consultations', 'doctorSurgeonConsultations', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.organTransplant) ? generateMergedRow('Organ Transplant', 'organTransplant', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.kidneyDialysis) ? generateMergedRow('Kidney Dialysis', 'kidneyDialysis', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.ipCoinsurance) ? generateMergedRow('IP Co-insurance', 'ipCoinsurance', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.deductibleConsultation) ? generateMergedRow('Deductible (Consultation)', 'deductibleConsultation', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.opCoinsurance) ? generateMergedRow('OP Co-insurance', 'opCoinsurance', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.pharmacyLimit) ? generateMergedRow('Pharmacy Limit', 'pharmacyLimit', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.pharmacyCoinsurance) ? generateMergedRow('Pharmacy Co-insurance', 'pharmacyCoinsurance', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.medicineType) ? generateMergedRow('Medicine Type', 'medicineType', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? generateMergedRow('Physiotherapy Sessions', 'prescribedPhysiotherapy', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.inPatientMaternity) ? generateMergedRow('In-Patient Maternity', 'inPatientMaternity', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.outPatientMaternity) ? generateMergedRow('Out-Patient Maternity', 'outPatientMaternity', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.mentalHealth) ? generateMergedRow('Mental Health / Psychiatric Services', 'mentalHealth', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.dentalBenefits) ? generateMergedRow('Dental Benefits', 'dentalBenefits', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.opticalBenefits) ? generateMergedRow('Optical Benefits', 'opticalBenefits', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.maternity) ? generateMergedRow('Maternity', 'maternity', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.dentalDiscounts) ? generateMergedRow('Dental Discounts', 'dentalDiscounts', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.opticalDiscount) ? generateMergedRow('Optical Discount', 'opticalDiscount', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.kidneyDialysis) ? generateMergedRow('Kidney Dialysis', 'kidneyDialysis', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.organTransplant) ? generateMergedRow('Organ Transplant', 'organTransplant', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.optical) ? generateMergedRow('Optical Benefits', 'optical', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.returnAirFare) ? generateMergedRow('Return Air Fare', 'returnAirFare', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.annualHealthCheckup) ? generateMergedRow('Annual Health Checkup', 'annualHealthCheckup', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Repatriation', 'repatriation', plans, highlightedPlanId) : ''}
@@ -2552,12 +2545,6 @@ ${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
                 <tr>
                     <td class="benefit-name">Repatriation</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'repatriation')}</td>`).join('')}
-                </tr>
-                ` : ''}
-                ${plans.some(plan => plan.categoriesData?.mentalHealth) ? `
-                <tr>
-                    <td class="benefit-name">Mental Health / Psychiatric Services</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'mentalHealth')}</td>`).join('')}
                 </tr>
                 ` : ''}
                 ` : ''}
@@ -2878,9 +2865,9 @@ const handleCopyFromFirst = () => {
           ))}
         </select>
       )}
-  {showTextArea && (
-  <textarea
-    value={categoriesData[benefit.field]?.[`${category}Other`] || ''}
+      {showTextArea && (
+        <textarea
+          value={categoriesData[benefit.field]?.[`${category}Other`] || categoriesData[benefit.field]?.[category] || ''}
           onChange={(e) => {
             if (hasDropdown) {
               onChange(benefit.field, `${category}Other`, e.target.value);
@@ -4702,7 +4689,7 @@ const handleBackToNormal = () => {
   // For ENHANCED_CUSTOM, area of cover has no dropdown (textarea only)
   const companyInfoBenefits = [
     { field: 'areaOfCover', label: 'Area of Cover', options: planType === 'ENHANCED_CUSTOM' ? [] : AREA_OF_COVER_OPTIONS, showMainValue: planType !== 'ENHANCED_CUSTOM', hasTextArea: true, canHighlight: false },
-{ field: 'network', label: 'Network', options: [...networkOptions, 'Other'], showMainValue: true, hasTextArea: true, canHighlight: false },
+    { field: 'network', label: 'Network', options: networkOptions, showMainValue: true, hasTextArea: false, canHighlight: false },
     { field: 'aggregateLimit', label: 'Aggregate Limit', options: AGGREGATE_LIMIT_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: false },
     { field: 'medicalUnderwriting', label: 'Medical Underwriting', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
   ];
@@ -4729,15 +4716,15 @@ const handleBackToNormal = () => {
     { field: 'prescribedPhysiotherapy', label: 'Prescribed Physiotherapy', options: PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true }
   ];
 
-   const otherBenefits = [
+    const otherBenefits = [
       { field: 'inPatientMaternity', label: 'In-Patient Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: OUTPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+{ field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: OUTPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
       { field: 'routineDental', label: 'Dental Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'routineOptical', label: 'Optical Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'preventiveServices', label: 'Preventive Services', options: PREVENTIVE_SERVICES_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
       { field: 'alternativeMedicines', label: 'Alternative Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'repatriation', label: 'Repatriation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'mentalHealth', label: 'Mental Health / Psychiatric Services', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+   
     ];
 
     return { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits };
@@ -4763,31 +4750,25 @@ const showEditableEnhancedBasicFields = () => {
   if (planType !== 'ENHANCED_BASIC' || !currentPlan.providerName) return null;
 
   // Define ALL possible DHA Enhanced template fields - keys must match categoriesData keys
-const ALL_DHA_ENHANCED_FIELDS = [
+  const ALL_DHA_ENHANCED_FIELDS = [
     { key: 'planName', label: 'Product Name', type: 'text' },
     { key: 'aggregateLimit', label: 'Annual Limit', type: 'text' },
     { key: 'areaOfCover', label: 'Geographical Scope', type: 'textarea', rows: 3 },
     { key: 'network', label: 'Network', type: 'text' },
     { key: 'accessForOP', label: 'Access for OP', type: 'textarea', rows: 2 },
     { key: 'referralProcedure', label: 'Referral Procedure', type: 'text' },
-    { key: 'intensiveCareUnit', label: 'Intensive Care Unit', type: 'text' },
-    { key: 'diagnosticTests', label: 'Diagnostic Tests And Procedures', type: 'text' },
-    { key: 'drugsMedicines', label: 'Drugs and Medicines', type: 'text' },
-    { key: 'doctorSurgeonConsultations', label: 'Doctor, Surgeon & Specialist Consultations', type: 'text' },
-    { key: 'organTransplant', label: 'Organ Transplant', type: 'text' },
-    { key: 'kidneyDialysis', label: 'Kidney Dialysis', type: 'text' },
     { key: 'ipCoinsurance', label: 'IP Co-insurance', type: 'text' },
     { key: 'deductibleConsultation', label: 'Deductible (Consultation)', type: 'text' },
     { key: 'opCoinsurance', label: 'OP Co-insurance', type: 'text' },
     { key: 'pharmacyLimit', label: 'Pharmacy Limit', type: 'text' },
     { key: 'pharmacyCoinsurance', label: 'Pharmacy Co-insurance', type: 'text' },
-    { key: 'medicineType', label: 'Medicine Type', type: 'text' },
     { key: 'prescribedPhysiotherapy', label: 'Physiotherapy Sessions', type: 'text' },
-    { key: 'inPatientMaternity', label: 'In-Patient Maternity', type: 'text' },
-    { key: 'outPatientMaternity', label: 'Out-Patient Maternity', type: 'text' },
-    { key: 'mentalHealth', label: 'Mental Health / Psychiatric Services', type: 'text' },
-    { key: 'dentalBenefits', label: 'Dental Benefits', type: 'text' },
-    { key: 'opticalBenefits', label: 'Optical Benefits', type: 'text' },
+    { key: 'maternity', label: 'Maternity', type: 'text' },
+    { key: 'dentalDiscounts', label: 'Dental Discounts', type: 'text' },
+    { key: 'kidneyDialysis', label: 'Kidney Dialysis', type: 'text' },
+    { key: 'organTransplant', label: 'Organ Transplant', type: 'text' },
+    { key: 'optical', label: 'Optical', type: 'text' },
+    { key: 'opticalDiscount', label: 'Optical Discount', type: 'text' },
     { key: 'returnAirFare', label: 'Return Air Fare', type: 'text' },
     { key: 'annualHealthCheckup', label: 'Annual Health Checkup', type: 'text' },
     { key: 'repatriation', label: 'Repatriation', type: 'text' }
@@ -4803,31 +4784,22 @@ const ALL_DHA_ENHANCED_FIELDS = [
   ];
 
   // Define the fields that should appear for simplified template (Basic Template)
- const SIMPLIFIED_TEMPLATE_FIELDS = [
+  const SIMPLIFIED_TEMPLATE_FIELDS = [
     { key: 'planName', label: 'Product Name', type: 'text' },
     { key: 'aggregateLimit', label: 'Annual Limit', type: 'text' },
     { key: 'areaOfCover', label: 'Geographical Scope', type: 'textarea', rows: 3 },
     { key: 'network', label: 'Network', type: 'text' },
     { key: 'accessForOP', label: 'Access for OP', type: 'textarea', rows: 2 },
     { key: 'referralProcedure', label: 'Referral Procedure', type: 'text' },
-    { key: 'intensiveCareUnit', label: 'Intensive Care Unit', type: 'text' },
-    { key: 'diagnosticTests', label: 'Diagnostic Tests And Procedures', type: 'text' },
-    { key: 'drugsMedicines', label: 'Drugs and Medicines', type: 'text' },
-    { key: 'doctorSurgeonConsultations', label: 'Doctor, Surgeon & Specialist Consultations', type: 'text' },
-    { key: 'organTransplant', label: 'Organ Transplant', type: 'text' },
-    { key: 'kidneyDialysis', label: 'Kidney Dialysis', type: 'text' },
     { key: 'ipCoinsurance', label: 'IP Co-insurance', type: 'text' },
     { key: 'deductibleConsultation', label: 'Deductible (Consultation)', type: 'text' },
     { key: 'opCoinsurance', label: 'OP Co-insurance', type: 'text' },
     { key: 'pharmacyLimit', label: 'Pharmacy Limit', type: 'text' },
     { key: 'pharmacyCoinsurance', label: 'Pharmacy Co-insurance', type: 'text' },
-    { key: 'medicineType', label: 'Medicine Type', type: 'text' },
     { key: 'prescribedPhysiotherapy', label: 'Physiotherapy Sessions', type: 'text' },
-    { key: 'inPatientMaternity', label: 'In-Patient Maternity', type: 'text' },
-    { key: 'outPatientMaternity', label: 'Out-Patient Maternity', type: 'text' },
-    { key: 'mentalHealth', label: 'Mental Health / Psychiatric Services', type: 'text' },
-    { key: 'dentalBenefits', label: 'Dental Benefits', type: 'text' },
-    { key: 'opticalBenefits', label: 'Optical Benefits', type: 'text' }
+    { key: 'maternity', label: 'Maternity', type: 'text' },
+    { key: 'dentalDiscounts', label: 'Dental Discounts', type: 'text' },
+    { key: 'opticalDiscount', label: 'Optical Discount', type: 'text' }
   ];
 
   // Check if current provider is a simplified template provider
@@ -5107,7 +5079,7 @@ const ALL_DHA_ENHANCED_FIELDS = [
                     <option key={option} value={option}>{option}</option>
                   ))}
                 </select>
-                {companyInfo.tpa === 'Other' && (planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
+                {companyInfo.tpa === 'Other' && planType === 'SME' && (
                   <input
                     type="text"
                     value={companyInfo.tpaManual}
