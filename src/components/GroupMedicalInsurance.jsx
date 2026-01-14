@@ -2096,6 +2096,8 @@ function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber
   const today = new Date().toLocaleDateString('en-GB');
   const hasComment = advisorComment && advisorComment.trim() !== '';
 
+  
+
   const isBenefitHighlighted = (planId, benefitKey) => {
     return highlightedItems[planId] && highlightedItems[planId][benefitKey];
   };
@@ -2641,46 +2643,291 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 </tr>
                 `).join('')}
                 
-          <tr class="section-header">
-                    <td colspan="${plans.length + 1}">PREMIUM DETAILS</td>
-                </tr>
-                ${(() => {
-                  const ALL_CATEGORY_CONFIGS = [
-                    { cat: 'CAT A', members: 'catAMembers', premium: 'catAPremium', label: 'Category A' },
-                    { cat: 'CAT B', members: 'catBMembers', premium: 'catBPremium', label: 'Category B' },
-                    { cat: 'CAT C', members: 'catCMembers', premium: 'catCPremium', label: 'Category C' },
-                    { cat: 'CAT D', members: 'catDMembers', premium: 'catDPremium', label: 'Category D' },
-                    { cat: 'LSB', members: 'catAMembers', premium: 'catAPremium', label: 'LSB' },
-                    { cat: 'HSB', members: 'catBMembers', premium: 'catBPremium', label: 'HSB' }
-                  ];
-                  
-                  const allCategories = new Set();
-                  plans.forEach(plan => {
-                    if (plan.selectedCategories) {
-                      plan.selectedCategories.forEach(cat => allCategories.add(cat));
-                    }
-                  });
-                  
-                  const categoryOrder = ['CAT A', 'LSB', 'CAT B', 'HSB', 'CAT C', 'CAT D'];
-                  const sortedCategories = Array.from(allCategories).sort((a, b) => {
-                    return categoryOrder.indexOf(a) - categoryOrder.indexOf(b);
-                  });
-                  
-                  let premiumRows = '';
-                  
-                  sortedCategories.forEach(cat => {
-                    const config = ALL_CATEGORY_CONFIGS.find(c => c.cat === cat);
-                    if (!config) return;
-                    
-                    premiumRows += '<tr><td class="benefit-name">' + config.label + ' Members</td>' + plans.map(plan => '<td style="text-align: center;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + (plan.selectedCategories && plan.selectedCategories.includes(cat) ? (plan[config.members] || 0) : '-') + '</td>').join('') + '</tr>';
-                    
-                    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_' + config.label + ' (AED)</td>' + plans.map(plan => '<td style="text-align: center;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + (plan.selectedCategories && plan.selectedCategories.includes(cat) ? 'AED ' + (plan[config.premium] || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-') + '</td>').join('') + '</tr>';
-                    
-                    premiumRows += '<tr><td class="benefit-name">Total Premium_' + config.label + '</td>' + plans.map(plan => '<td style="text-align: center;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + (plan.selectedCategories && plan.selectedCategories.includes(cat) ? 'AED ' + ((plan[config.members] || 0) * (plan[config.premium] || 0)).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) : '-') + '</td>').join('') + '</tr>';
-                  });
-                  
-                  return premiumRows;
-                })()}
+<tr class="section-header">
+    <td colspan="${plans.length + 1}">PREMIUM DETAILS</td>
+</tr>
+${(() => {
+  let premiumRows = '';
+  
+// FIXED: Helper function to reliably detect BASIC plans or LSB/HSB plans
+  // Checks planType, selectedCategories, AND 'LSB & HSB' combined category
+  const isBasicPlan = (plan) => {
+    // Check explicit planType first
+    if (plan.planType === 'BASIC') return true;
+    // Check for ENHANCED_CUSTOM with LSB & HSB category
+    if (plan.planType === 'ENHANCED_CUSTOM' && plan.selectedCategories && Array.isArray(plan.selectedCategories)) {
+      if (plan.selectedCategories.includes('LSB & HSB')) {
+        return true;
+      }
+    }
+    // Fallback: check if selectedCategories contains LSB or HSB separately
+    if (plan.selectedCategories && Array.isArray(plan.selectedCategories)) {
+      if (plan.selectedCategories.includes('LSB') || plan.selectedCategories.includes('HSB')) {
+        return true;
+      }
+    }
+    return false;
+  };
+  
+  // Use helper function for all detections
+  const hasBasicPlans = plans.some(p => isBasicPlan(p) && (p.catAMembers > 0 || p.catAPremium > 0));
+  const hasNonBasicPlans = plans.some(p => !isBasicPlan(p) && (p.catAMembers > 0 || p.catAPremium > 0));
+  const hasBasicHSB = plans.some(p => isBasicPlan(p) && (p.catBMembers > 0 || p.catBPremium > 0));
+  const hasNonBasicB = plans.some(p => !isBasicPlan(p) && (p.catBMembers > 0 || p.catBPremium > 0));
+  
+  // LSB Row (for BASIC plans)
+  if (hasBasicPlans) {
+    premiumRows += '<tr><td class="benefit-name">LSB Members</td>';
+    plans.forEach(plan => {
+      const showLSB = isBasicPlan(plan) && (plan.catAMembers > 0 || plan.catAPremium > 0);
+      const value = showLSB ? (plan.catAMembers || 0) : '-';
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Average Premium for LSB
+    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_LSB (AED)</td>';
+    plans.forEach(plan => {
+      const showLSB = isBasicPlan(plan) && (plan.catAMembers > 0 || plan.catAPremium > 0);
+      let value = '-';
+      if (showLSB) {
+        const premium = plan.catAPremium || 0;
+        value = 'AED ' + premium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Total Premium for LSB
+    premiumRows += '<tr><td class="benefit-name">Total Premium_LSB</td>';
+    plans.forEach(plan => {
+      const showLSB = isBasicPlan(plan) && (plan.catAMembers > 0 || plan.catAPremium > 0);
+      let value = '-';
+      if (showLSB) {
+        const members = plan.catAMembers || 0;
+        const premium = plan.catAPremium || 0;
+        const total = members * premium;
+        value = 'AED ' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+  }
+  
+  // HSB Row (for BASIC plans)
+  if (hasBasicHSB) {
+    premiumRows += '<tr><td class="benefit-name">HSB Members</td>';
+    plans.forEach(plan => {
+      const showHSB = isBasicPlan(plan) && (plan.catBMembers > 0 || plan.catBPremium > 0);
+      const value = showHSB ? (plan.catBMembers || 0) : '-';
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Average Premium for HSB
+    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_HSB (AED)</td>';
+    plans.forEach(plan => {
+      const showHSB = isBasicPlan(plan) && (plan.catBMembers > 0 || plan.catBPremium > 0);
+      let value = '-';
+      if (showHSB) {
+        const premium = plan.catBPremium || 0;
+        value = 'AED ' + premium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Total Premium for HSB
+    premiumRows += '<tr><td class="benefit-name">Total Premium_HSB</td>';
+    plans.forEach(plan => {
+      const showHSB = isBasicPlan(plan) && (plan.catBMembers > 0 || plan.catBPremium > 0);
+      let value = '-';
+      if (showHSB) {
+        const members = plan.catBMembers || 0;
+        const premium = plan.catBPremium || 0;
+        const total = members * premium;
+        value = 'AED ' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+  }
+  
+  // Category A Row (for non-BASIC plans)
+  if (hasNonBasicPlans) {
+    premiumRows += '<tr><td class="benefit-name">Category A Members</td>';
+    plans.forEach(plan => {
+      const showCatA = !isBasicPlan(plan) && (plan.catAMembers > 0 || plan.catAPremium > 0);
+      const value = showCatA ? (plan.catAMembers || 0) : '-';
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Average Premium for Category A
+    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_Category A (AED)</td>';
+    plans.forEach(plan => {
+      const showCatA = !isBasicPlan(plan) && (plan.catAMembers > 0 || plan.catAPremium > 0);
+      let value = '-';
+      if (showCatA) {
+        const premium = plan.catAPremium || 0;
+        value = 'AED ' + premium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Total Premium for Category A
+    premiumRows += '<tr><td class="benefit-name">Total Premium_Category A</td>';
+    plans.forEach(plan => {
+      const showCatA = !isBasicPlan(plan) && (plan.catAMembers > 0 || plan.catAPremium > 0);
+      let value = '-';
+      if (showCatA) {
+        const members = plan.catAMembers || 0;
+        const premium = plan.catAPremium || 0;
+        const total = members * premium;
+        value = 'AED ' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+  }
+  
+  // Category B Row (for non-BASIC plans)
+  if (hasNonBasicB) {
+    premiumRows += '<tr><td class="benefit-name">Category B Members</td>';
+    plans.forEach(plan => {
+      const showCatB = !isBasicPlan(plan) && (plan.catBMembers > 0 || plan.catBPremium > 0);
+      const value = showCatB ? (plan.catBMembers || 0) : '-';
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Average Premium for Category B
+    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_Category B (AED)</td>';
+    plans.forEach(plan => {
+      const showCatB = !isBasicPlan(plan) && (plan.catBMembers > 0 || plan.catBPremium > 0);
+      let value = '-';
+      if (showCatB) {
+        const premium = plan.catBPremium || 0;
+        value = 'AED ' + premium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    // Total Premium for Category B
+    premiumRows += '<tr><td class="benefit-name">Total Premium_Category B</td>';
+    plans.forEach(plan => {
+      const showCatB = !isBasicPlan(plan) && (plan.catBMembers > 0 || plan.catBPremium > 0);
+      let value = '-';
+      if (showCatB) {
+        const members = plan.catBMembers || 0;
+        const premium = plan.catBPremium || 0;
+        const total = members * premium;
+        value = 'AED ' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+  }
+  
+  // Handle Category C and D if they exist (for any plan type)
+  const hasCatC = plans.some(p => p.catCMembers > 0 || p.catCPremium > 0);
+  const hasCatD = plans.some(p => p.catDMembers > 0 || p.catDPremium > 0);
+  
+  if (hasCatC) {
+    premiumRows += '<tr><td class="benefit-name">Category C Members</td>';
+    plans.forEach(plan => {
+      const showCatC = plan.catCMembers > 0 || plan.catCPremium > 0;
+      const value = showCatC ? (plan.catCMembers || 0) : '-';
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_Category C (AED)</td>';
+    plans.forEach(plan => {
+      const showCatC = plan.catCMembers > 0 || plan.catCPremium > 0;
+      let value = '-';
+      if (showCatC) {
+        const premium = plan.catCPremium || 0;
+        value = 'AED ' + premium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    premiumRows += '<tr><td class="benefit-name">Total Premium_Category C</td>';
+    plans.forEach(plan => {
+      const showCatC = plan.catCMembers > 0 || plan.catCPremium > 0;
+      let value = '-';
+      if (showCatC) {
+        const members = plan.catCMembers || 0;
+        const premium = plan.catCPremium || 0;
+        const total = members * premium;
+        value = 'AED ' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+  }
+  
+  if (hasCatD) {
+    premiumRows += '<tr><td class="benefit-name">Category D Members</td>';
+    plans.forEach(plan => {
+      const showCatD = plan.catDMembers > 0 || plan.catDPremium > 0;
+      const value = showCatD ? (plan.catDMembers || 0) : '-';
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    premiumRows += '<tr><td class="benefit-name">Average Premium Per Person_Category D (AED)</td>';
+    plans.forEach(plan => {
+      const showCatD = plan.catDMembers > 0 || plan.catDPremium > 0;
+      let value = '-';
+      if (showCatD) {
+        const premium = plan.catDPremium || 0;
+        value = 'AED ' + premium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+    
+    premiumRows += '<tr><td class="benefit-name">Total Premium_Category D</td>';
+    plans.forEach(plan => {
+      const showCatD = plan.catDMembers > 0 || plan.catDPremium > 0;
+      let value = '-';
+      if (showCatD) {
+        const members = plan.catDMembers || 0;
+        const premium = plan.catDPremium || 0;
+        const total = members * premium;
+        value = 'AED ' + total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      const cellClass = plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '';
+      premiumRows += '<td style="text-align: center;" class="' + cellClass + '">' + value + '</td>';
+    });
+    premiumRows += '</tr>';
+  }
+  
+  return premiumRows;
+})()}
+
                 <tr style="background-color: #c7d2fe;">
                     <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
                     ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
@@ -4232,9 +4479,16 @@ if (isCustom) {
 
      let planToAdd = { 
   ...currentPlan, 
-  planType,
+  planType: currentPlan.planType || planType,  // ← CRITICAL: Use currentPlan.planType first, fallback to state
   tpa: companyInfo.tpa === 'Other' ? companyInfo.tpaManual : companyInfo.tpa
 };
+
+// DEBUG: Log the planType being saved
+console.log('=== SAVING PLAN ===');
+console.log('currentPlan.planType:', currentPlan.planType);
+console.log('planType state:', planType);
+console.log('Final planType saved:', planToAdd.planType);
+console.log('==================');
 
       if (planType === 'BASIC') {
         if (!currentPlan.annualLimit) {
