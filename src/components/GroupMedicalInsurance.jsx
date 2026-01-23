@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { saveComparison, updateComparison, getUserComparisons, deleteComparison as deleteComparisonFromDb, logActivity, getAllComparisons } from '../utils/supabaseDb';
 
 // ============================================================================
 // SECTION 1: CONSTANTS & DATA
@@ -4021,6 +4023,8 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
 
 // -------- Plan Generator Component --------
 function PlanGenerator() {
+  const { user, isAdmin } = useAuth();
+  
   const [planType, setPlanType] = useState('SME');
   const [plans, setPlans] = useState([]);
   const [showDHAEnhancedSelector, setShowDHAEnhancedSelector] = useState(false);
@@ -4687,9 +4691,7 @@ console.log('==================');
     const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
     downloadHTMLFile(htmlContent, fileName);
     
-    const comparison = {
-      id: isEditingComparison ? currentComparisonId : Date.now(),
-      date: new Date().toISOString(),
+   const comparison = {
       companyName: companyInfo.companyName,
       referenceNumber,
       plans,
@@ -4697,25 +4699,25 @@ console.log('==================');
       advisorComment,
       highlightedPlanId,
       highlightedItems,
-      customFields
+      customFields,
+      htmlContent: htmlContent,
     };
     
-    let updatedHistory;
-    if (isEditingComparison) {
-      // Update existing comparison
-      updatedHistory = history.map(item => 
-        item.id === currentComparisonId ? comparison : item
-      );
-      alert('✅ Comparison updated successfully!');
-    } else {
-      // Add new comparison
-      updatedHistory = [comparison, ...history];
-      alert('✅ Comparison saved successfully!');
+    try {
+      if (isEditingComparison && currentComparisonId) {
+        await updateComparison(currentComparisonId, comparison, user);
+        await logActivity(user, 'edit_comparison', { companyName: companyInfo.companyName, referenceNumber });
+        alert('✅ Comparison updated successfully!');
+      } else {
+        await saveComparison(comparison, user);
+        await logActivity(user, 'create_comparison', { companyName: companyInfo.companyName, referenceNumber });
+        alert('✅ Comparison saved successfully!');
+      }
+      loadHistory();
+    } catch (error) {
+      console.error('Error saving:', error);
+      alert('⚠️ Error saving comparison');
     }
-    
-    // Save to cloud
-    await saveComparisons(updatedHistory);
-    setHistory(updatedHistory);
     
     // Reset editing state
     setIsEditingComparison(false);
@@ -4937,16 +4939,32 @@ const handleBackToNormal = () => {
   };
 
   // Load history from cloud
-  const loadHistory = async () => {
-    const savedHistory = await loadComparisons();
-    setHistory(savedHistory);
+const loadHistory = async () => {
+    try {
+      let savedHistory;
+      if (isAdmin) {
+        savedHistory = await getAllComparisons();
+      } else if (user?.id) {
+        savedHistory = await getUserComparisons(user.id);
+      } else {
+        savedHistory = [];
+      }
+      setHistory(savedHistory);
+    } catch (error) {
+      console.error('Error loading history:', error);
+      setHistory([]);
+    }
   };
 
   // Delete comparison from cloud
-  const deleteComparison = async (id) => {
-    const updatedHistory = history.filter(item => item.id !== id);
-    setHistory(updatedHistory);
-    await saveComparisons(updatedHistory);
+const deleteComparison = async (id) => {
+    try {
+      await deleteComparisonFromDb(id);
+      await logActivity(user, 'delete_comparison', { comparisonId: id });
+      loadHistory();
+    } catch (error) {
+      console.error('Error deleting:', error);
+    }
   };
 
   // Preview comparison without first page
