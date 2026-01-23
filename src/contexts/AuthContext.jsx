@@ -9,11 +9,8 @@ export const AuthProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Initialize Netlify Identity
-    netlifyIdentity.init({
-      container: '#netlify-modal',
-      locale: 'en'
-    });
+    // Initialize Netlify Identity (without container - uses default modal)
+    netlifyIdentity.init();
 
     // Check for existing user
     const currentUser = netlifyIdentity.currentUser();
@@ -38,14 +35,23 @@ export const AuthProvider = ({ children }) => {
 
     // Listen for signup
     netlifyIdentity.on('signup', (signedUpUser) => {
-      // User signed up but needs to confirm email
       console.log('User signed up:', signedUpUser);
+    });
+
+    // Listen for init
+    netlifyIdentity.on('init', (initUser) => {
+      if (initUser) {
+        setUser(initUser);
+        setIsAdmin(initUser.app_metadata?.roles?.includes('admin') || false);
+      }
+      setLoading(false);
     });
 
     return () => {
       netlifyIdentity.off('login');
       netlifyIdentity.off('logout');
       netlifyIdentity.off('signup');
+      netlifyIdentity.off('init');
     };
   }, []);
 
@@ -75,7 +81,6 @@ export const AuthProvider = ({ children }) => {
         created_at: new Date().toISOString()
       };
 
-      // Send to Netlify function
       await fetch('/api/activity-logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

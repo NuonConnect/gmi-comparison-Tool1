@@ -1,14 +1,7 @@
-import { useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
   const { login, signup } = useAuth();
-
-  useEffect(() => {
-    // Auto-open login modal on page load
-    // Uncomment if you want auto-open:
-    // login();
-  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 p-4">
@@ -68,9 +61,6 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
-
-      {/* Netlify Identity Modal Container */}
-      <div id="netlify-modal"></div>
     </div>
   );
 };
