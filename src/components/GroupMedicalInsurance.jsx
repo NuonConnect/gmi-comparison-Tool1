@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { saveComparison, updateComparison, getUserComparisons, deleteComparison as deleteComparisonFromDb, logActivity, getAllComparisons } from '../utils/supabaseDb';
+import { saveComparison, updateComparison, getUserComparisons, deleteComparison as deleteComparisonFromDb, logActivity, getAllComparisons } from '../utils/netlifyDb';
 
 // ============================================================================
 // SECTION 1: CONSTANTS & DATA

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getAllComparisons, getAllActivityLogs, deleteComparison } from '../utils/supabaseDb';
+import { getAllComparisons, getAllActivityLogs, deleteComparison } from '../utils/netlifyDb';
 
 const AdminDashboard = ({ onClose, onLoadComparison }) => {
   const { user, isAdmin } = useAuth();
