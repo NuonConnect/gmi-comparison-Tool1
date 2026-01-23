@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { saveComparison, updateComparison, getUserComparisons, deleteComparison as deleteComparisonFromDb, logActivity, getAllComparisons } from '../utils/netlifyDb';
+import UserHeader from './UserHeader';
+import AdminDashboard from './AdminDashboard';
 
 // ============================================================================
 // SECTION 1: CONSTANTS & DATA
@@ -4074,6 +4076,7 @@ const [currentPlan, setCurrentPlan] = useState({
   const [isEditingComparison, setIsEditingComparison] = useState(false);
   const [currentComparisonId, setCurrentComparisonId] = useState(null);
   const [history, setHistory] = useState([]);
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 
   useEffect(() => {
     loadHistory();
@@ -5445,8 +5448,21 @@ const showEditableEnhancedBasicFields = () => {
 
 const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBenefits: [] };
 
- return (
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+return (
+  <div className="min-h-screen bg-gradient-to-br from-slate-100 to-indigo-100">
+    {/* HEADER */}
+    <UserHeader onOpenAdmin={() => setShowAdminDashboard(true)} />
+    
+    {/* ADMIN DASHBOARD MODAL */}
+    {showAdminDashboard && (
+      <AdminDashboard 
+        onClose={() => setShowAdminDashboard(false)}
+      />
+    )}
+    
+    {/* MAIN CONTENT */}
+    <div className="p-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {/* LEFT COLUMN - FORM */}
     <div className="bg-white rounded-xl p-5 shadow-2xl">
       <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200">
@@ -6649,6 +6665,8 @@ const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBen
   />
 )}
 </div>
+    </div>
+  </div>
 );
 }
 export default PlanGenerator;

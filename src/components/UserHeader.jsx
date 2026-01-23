@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-const UserHeader = ({ onOpenAdmin, isAdmin }) => {
-  const { user, signOut } = useAuth();
+const UserHeader = ({ onOpenAdmin }) => {
+  const { user, logout, isAdmin } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await signOut();
-      // Reload page after logout
-      window.location.reload();
+      logout();
     } catch (error) {
       console.error('Logout error:', error);
       alert('Failed to logout. Please try again.');
@@ -41,15 +39,16 @@ const UserHeader = ({ onOpenAdmin, isAdmin }) => {
         <div className="flex justify-between items-center">
           {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <img 
-              src="https://i.imgur.com/GCOPBN1.png" 
-              alt="NSIB Logo" 
+            <img
+              src="https://i.imgur.com/GCOPBN1.png"
+              alt="NSIB Logo"
               className="h-10"
             />
             <div>
               <h1 className="text-xl font-bold text-white">GMI Comparison Tool</h1>
               <p className="text-indigo-200 text-xs">New Shield Insurance Brokers</p>
             </div>
+            <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">TEST</span>
           </div>
 
           {/* User Menu */}
@@ -64,7 +63,10 @@ const UserHeader = ({ onOpenAdmin, isAdmin }) => {
               <div className="text-left hidden sm:block">
                 <div className="text-white font-bold text-sm">{getUserName()}</div>
                 {isAdmin && (
-                  <div className="text-indigo-200 text-xs">👑 Administrator</div>
+                  <div className="text-yellow-300 text-xs">👑 Administrator</div>
+                )}
+                {!isAdmin && (
+                  <div className="text-indigo-200 text-xs">User</div>
                 )}
               </div>
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,11 +78,11 @@ const UserHeader = ({ onOpenAdmin, isAdmin }) => {
             {showDropdown && (
               <>
                 {/* Backdrop */}
-                <div 
-                  className="fixed inset-0 z-10" 
+                <div
+                  className="fixed inset-0 z-10"
                   onClick={() => setShowDropdown(false)}
                 />
-                
+
                 {/* Dropdown */}
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl z-20 overflow-hidden border border-gray-200">
                   {/* User Info */}
@@ -102,7 +104,7 @@ const UserHeader = ({ onOpenAdmin, isAdmin }) => {
                         <span className="text-xl">📊</span>
                         <div>
                           <div className="font-bold text-gray-800">Admin Dashboard</div>
-                          <div className="text-xs text-gray-500">View all files & activity</div>
+                          <div className="text-xs text-gray-500">View all comparisons & activity</div>
                         </div>
                       </button>
                     )}
