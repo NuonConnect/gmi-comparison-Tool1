@@ -1,6 +1,5 @@
 // Netlify Function for GMI Comparisons Cloud Storage
 // Uses Netlify Blobs for persistent storage across all users
-
 import { getStore } from "@netlify/blobs";
 
 export default async (req, context) => {
@@ -18,28 +17,30 @@ export default async (req, context) => {
   }
 
   try {
-    // Initialize the blob store
+    // Initialize the blob store - simplified syntax
     const store = getStore({
       name: 'gmi-comparisons',
-      siteID: context.site.id,
-      token: context.env.NETLIFY_BLOBS_TOKEN || process.env.NETLIFY_BLOBS_TOKEN
+      consistency: 'strong'
     });
-
+    
     const BLOB_KEY = 'all-comparisons';
 
     if (req.method === 'GET') {
-      // Fetch all comparisons from cloud
+      console.log('GET request - Fetching comparisons');
+      
       try {
         const data = await store.get(BLOB_KEY, { type: 'json' });
+        console.log('Fetched comparisons:', data ? data.length : 0);
         return new Response(JSON.stringify(data || []), { status: 200, headers });
       } catch (error) {
-        // Return empty array if no data exists yet
+        console.log('No existing data, returning empty array');
         return new Response(JSON.stringify([]), { status: 200, headers });
       }
     }
 
     if (req.method === 'POST') {
-      // Save comparisons to cloud
+      console.log('POST request - Saving comparisons');
+      
       const comparisons = await req.json();
       
       // Validate data
@@ -50,6 +51,8 @@ export default async (req, context) => {
         );
       }
 
+      console.log('Saving', comparisons.length, 'comparisons');
+      
       // Save to blob storage
       await store.setJSON(BLOB_KEY, comparisons);
 
