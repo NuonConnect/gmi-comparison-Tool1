@@ -2,7 +2,7 @@
 // This replaces supabaseDb.js
 
 // Save a new comparison
-export const saveComparison = async (comparisonData) => {
+export const saveComparison = async (comparisonData, user) => {
   try {
     // Get existing comparisons
     const response = await fetch('/api/comparisons');
@@ -11,10 +11,12 @@ export const saveComparison = async (comparisonData) => {
       comparisons = await response.json();
     }
 
-    // Create new comparison
+// Create new comparison with user_id
     const newComparison = {
       id: Date.now().toString(),
       ...comparisonData,
+      user_id: user?.id || null,
+      user_email: user?.email || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -41,7 +43,7 @@ export const saveComparison = async (comparisonData) => {
 };
 
 // Update an existing comparison
-export const updateComparison = async (id, comparisonData) => {
+export const updateComparison = async (id, comparisonData, user) => {
   try {
     const response = await fetch('/api/comparisons');
     let comparisons = [];
@@ -55,9 +57,11 @@ export const updateComparison = async (id, comparisonData) => {
       return { success: false, error: 'Comparison not found' };
     }
 
-    comparisons[index] = {
+comparisons[index] = {
       ...comparisons[index],
       ...comparisonData,
+      user_id: user?.id || comparisons[index].user_id,
+      user_email: user?.email || comparisons[index].user_email,
       updated_at: new Date().toISOString()
     };
 

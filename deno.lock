@@ -19,6 +19,7 @@
         "npm:cors@^2.8.5",
         "npm:express@^5.2.1",
         "npm:html2pdf.js@0.13",
+        "npm:netlify-identity-widget@^1.9.2",
         "npm:postcss@^8.4.32",
         "npm:react-dom@^18.2.0",
         "npm:react@^18.2.0",

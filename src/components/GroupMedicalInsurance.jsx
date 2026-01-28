@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { saveComparison, updateComparison, getUserComparisons, deleteComparison as deleteComparisonFromDb, logActivity, getAllComparisons } from '../utils/netlifyDb';
 import UserHeader from './UserHeader';
 import AdminDashboard from './AdminDashboard';
+import TOBUploader from './TOBUploader';  
 
 // ============================================================================
 // SECTION 1: CONSTANTS & DATA
@@ -2061,8 +2062,11 @@ function downloadHTMLFile(htmlContent, fileName) {
 }
 
 const formatCategoryData = (categoriesData) => {
+  // Handle string values directly (from TOB plans)
+  if (typeof categoriesData === 'string') {
+    return categoriesData.trim() !== '' ? categoriesData : 'Not specified';
+  }
   if (!categoriesData || typeof categoriesData !== 'object') return 'Not specified';
-  
   const allCategories = Object.keys(categoriesData);
   if (allCategories.length === 0) return 'Not specified';
 
@@ -2096,11 +2100,47 @@ const formatCategoryData = (categoriesData) => {
   }
 };
 
-function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber, highlightedPlanId = null, highlightedItems = {}, customFields = [], showFirstPage = true) {
+function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber, highlightedPlanId = null, highlightedItems = {}, customFields = [], showFirstPage = true, hideOptions = {}) {
+  const { hideProviderNames = {}, hiddenFields = [], hideBrokerBranding = false } = hideOptions;
   const today = new Date().toLocaleDateString('en-GB');
   const hasComment = advisorComment && advisorComment.trim() !== '';
+  // Helper to check if field should be shown
+  const shouldShowField = (fieldKey) => !hiddenFields.includes(fieldKey);
 
-  
+  // Company Logo Mapping
+  const COMPANY_LOGOS = {
+    'SUKOON': 'https://i.imgur.com/hCWlUMe.jpeg',
+    'DNI': 'https://i.imgur.com/HKXpfsU.jpeg',
+    'DNIRC': 'https://i.imgur.com/HKXpfsU.jpeg',
+    'QATAR': 'https://i.imgur.com/5d63cLP.png',
+    'WATANIA': 'https://i.imgur.com/KaVFAu6.jpeg',
+    'ADAMJEE': 'https://i.imgur.com/dufDDqK.jpeg',
+    'FIDELITY': 'https://i.imgur.com/T26OgNE.jpeg',
+    'LIVA': 'https://i.imgur.com/BqDrkcY.jpeg',
+    'EMIRATES': 'https://i.imgur.com/8cnZRff.jpeg',
+    'RAK': 'https://i.imgur.com/HS6ctxT.png',
+    'SALAMA': 'https://i.imgur.com/Kx5sGSA.jpeg',
+    'INSURANCE HOUSE': 'https://i.imgur.com/OodWGYQ.jpeg',
+    'NEW INDIA': 'https://i.imgur.com/oUeb8HP.png',
+    'NIA': 'https://i.imgur.com/oUeb8HP.png',
+    'METHAQ': 'https://i.imgur.com/FjNhizV.jpeg',
+    'NGI': 'https://i.imgur.com/ye6IvRS.jpeg',
+    'GIG': 'https://i.imgur.com/Kho3VbT.png',
+    'AL WATHBA': 'https://i.imgur.com/eulYgMf.jpeg',
+    'ORIENT': 'https://i.imgur.com/eIN9e72.png',
+    'UNION INSURANCE': 'https://i.imgur.com/sdmPCNl.jpeg',
+    'AL SAGR': 'https://i.imgur.com/U2CmHX4.jpeg',
+    'AL ITTIHAD AL WATANI': 'https://i.imgur.com/UpraA62.jpeg',
+  };
+
+  const getProviderLogo = (providerName) => {
+    if (!providerName) return null;
+    const upperName = providerName.toUpperCase();
+    for (const [key, url] of Object.entries(COMPANY_LOGOS)) {
+      if (upperName.includes(key)) return url;
+    }
+    return null;
+  };
 
   const isBenefitHighlighted = (planId, benefitKey) => {
     return highlightedItems[planId] && highlightedItems[planId][benefitKey];
@@ -2166,8 +2206,7 @@ const hasDHAManualPlan = plans.some(plan => plan.planType === 'DHA_MANUAL');
 <head>
     <meta charset="UTF-8">
     <title>NSIB Group Medical Insurance Comparison</title>
-    <style>
-<style>
+<style> 
    * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: Arial, sans-serif; font-size: 11px; color: #000; background: #fff; }
 @page { size: A4 landscape; margin: 0; }
@@ -2274,16 +2313,18 @@ tr:not(.section-header) td:first-child {
 <body>
    ${showFirstPage ? `
     <div class="page1">
-        <img src="https://i.imgur.com/Qr8D3ML.png" alt="Cover Page">
+        <img src="https://i.imgur.com/gU1isYj.png" alt="Cover Page">
     </div>
     ` : ''}
 
     <div class="page2">
         <div class="reference-number">Reference: ${referenceNumber}</div>
+${!hideBrokerBranding ? `
         <div class="header-simple">
             <img src="https://i.imgur.com/GCOPBN1.png" alt="NSIB Logo" class="header-logo">
             <img src="https://i.imgur.com/Wsv3Ah2.png" alt="Corner" class="header-corner">
         </div>
+        ` : '<div style="height: 15mm;"></div>'}
         
         <div class="section-title">GROUP MEDICAL INSURANCE - LIVE COMPARISON</div>
         
@@ -2296,58 +2337,70 @@ tr:not(.section-header) td:first-child {
             <thead>
                 <tr>
                     <th style="width: 200px; min-width: 200px;">BENEFITS</th>
-                 ${plans.map(plan => `
-    <th class="plan-header">
-        ${plan.providerName.substring(0, 30)}${plan.planTag ? ' - ' + plan.planTag : ''}
-        ${plan.isRenewal ? '<div class="tag tag-renewal">RENEWAL</div>' : ''}
+${plans.map((plan, index) => {
+                   const isHidden = hideProviderNames[plan.id];
+                   const logoUrl = isHidden ? null : getProviderLogo(plan.providerName);
+                   const displayName = isHidden ? 'Option ' + String.fromCharCode(65 + index) : plan.providerName.substring(0, 30);
+                   return `
+    <th class="plan-header" style="vertical-align: middle;">
+        ${logoUrl ? `<div style="text-align: center; margin-bottom: 5px;">
+          <img src="${logoUrl}" alt="${plan.providerName}"
+               style="max-height: 40px; max-width: 100px; object-fit: contain;">
+        </div>` : ''}
+        <div style="text-align: center; font-weight: bold;">
+          ${displayName}${!isHidden && plan.planTag ? ' - ' + plan.planTag : ''}
+        </div>
+        ${!isHidden && plan.isRenewal ? '<div class="tag tag-renewal">RENEWAL</div>' : ''}
         ${plan.isRecommended ? '<div class="tag tag-recommended">RECOMMENDED</div>' : ''}
         ${plan.id === highlightedPlanId ? '<div class="tag tag-highlighted">HIGHLIGHTED</div>' : ''}
     </th>
-`).join('')}
+                   `;
+                 }).join('')}
+
                 </tr>
             </thead>
             <tbody>
                 <tr class="section-header">
                     <td colspan="${plans.length + 1}">COMPANY INFORMATION</td>
                 </tr>
-             <tr>
+${!hiddenFields.includes('tpa') ? `<tr>
     <td class="benefit-name">TPA</td>
-    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.tpa || 'Not specified'}</td>`).join('')}
-</tr>
+    ${plans.map(plan => '<td style="text-align: center;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + (plan.tpa || 'Not specified') + '</td>').join('')}
+</tr>` : ''}
                 ${!hasBasicPlan && !hasEnhancedPlan ? `
                 <tr>
                     <td class="benefit-name">Categories</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.selectedCategories?.join(', ') || 'Not specified'}</td>`).join('')}
                 </tr>
                 ` : ''}
+${!hiddenFields.includes('network') ? `
                 <tr>
                     <td class="benefit-name">Network</td>
                     ${plans.map(plan => {
                       const networkData = plan.categoriesData?.network || {};
                       const displayText = formatCategoryData(networkData);
-                      return `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${displayText}</td>`;
+                      return '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + displayText + '</td>';
                     }).join('')}
                 </tr>
-                <tr>
+                ` : ''}
+        ${!hiddenFields.includes('areaOfCover') ? `<tr>
                     <td class="benefit-name">Area of Cover</td>
                     ${plans.map(plan => {
                       const areaData = plan.categoriesData?.areaOfCover || plan.categoriesData?.geographicalScope || {};
                       const displayText = formatCategoryData(areaData);
-                      return `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${displayText}</td>`;
+                      return '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + displayText + '</td>';
                     }).join('')}
-                </tr>
-                <tr>
-    <td class="benefit-name">Aggregate Limit</td>
-    ${plans.map(plan => {
-      const limitData = plan.categoriesData?.aggregateLimit || plan.categoriesData?.annualLimit || {};
-      const displayText = formatCategoryData(limitData);
-      return `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${displayText}</td>`;
-    }).join('')}
-</tr>
-${hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? `
+                </tr>` : ''}
+ ${!hiddenFields.includes('preExistingCondition') && hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? `
 <tr>
     <td class="benefit-name">Pre Existing Condition</td>
-    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'preExistingCondition')}</td>`).join('')}
+    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'preExistingCondition') + '</td>').join('')}
+</tr>
+` : ''}
+${!hiddenFields.includes('preExistingCondition') && hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? `
+<tr>
+    <td class="benefit-name">Pre Existing Condition</td>
+    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'preExistingCondition') + '</td>').join('')}
 </tr>
 ` : ''}
 ${plans.some(p => p.categoriesData?.medicalUnderwriting) ? `
@@ -2388,10 +2441,10 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 <tr class="section-header">
                     <td colspan="${plans.length + 1}">INPATIENT BENEFITS</td>
                 </tr>
-                ${plans.some(plan => plan.categoriesData?.roomType) ? `
+${!hiddenFields.includes('roomType') && plans.some(plan => plan.categoriesData?.roomType) ? `
                 <tr>
                     <td class="benefit-name">Room Type</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'roomType')}</td>`).join('')}
+                    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'roomType') + '</td>').join('')}
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.diagnosticTests) ? `
@@ -2510,28 +2563,28 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                 <tr class="section-header">
                     <td colspan="${plans.length + 1}">OTHER BENEFITS</td>
                 </tr>
-             ${plans.some(p => p.categoriesData?.inPatientMaternity) ? `
+${!hiddenFields.includes('maternity') && plans.some(p => p.categoriesData?.inPatientMaternity) ? `
 <tr>
     <td class="benefit-name">In-Patient Maternity</td>
-    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inPatientMaternity')}</td>`).join('')}
+    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'inPatientMaternity') + '</td>').join('')}
 </tr>
 ` : ''}
-${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
+${!hiddenFields.includes('maternity') && plans.some(p => p.categoriesData?.outPatientMaternity) ? `
 <tr>
     <td class="benefit-name">Out-Patient Maternity</td>
-    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'outPatientMaternity')}</td>`).join('')}
+    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'outPatientMaternity') + '</td>').join('')}
 </tr>
 ` : ''}
-                ${plans.some(plan => plan.categoriesData?.routineDental) ? `
+          ${!hiddenFields.includes('dental') && plans.some(plan => plan.categoriesData?.routineDental) ? `
                 <tr>
                     <td class="benefit-name">Dental Benefits</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'routineDental')}</td>`).join('')}
+                    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'routineDental') + '</td>').join('')}
                 </tr>
                 ` : ''}
-                ${plans.some(plan => plan.categoriesData?.routineOptical) ? `
+        ${!hiddenFields.includes('optical') && plans.some(plan => plan.categoriesData?.routineOptical) ? `
                 <tr>
                     <td class="benefit-name">Optical Benefits</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'routineOptical')}</td>`).join('')}
+                    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'routineOptical') + '</td>').join('')}
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.preventiveServices) ? `
@@ -2546,10 +2599,10 @@ ${plans.some(p => p.categoriesData?.outPatientMaternity) ? `
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'alternativeMedicines')}</td>`).join('')}
                 </tr>
                 ` : ''}
-                ${plans.some(plan => plan.categoriesData?.repatriation) ? `
+ ${!hiddenFields.includes('repatriation') && plans.some(plan => plan.categoriesData?.repatriation) ? `
 <tr>
     <td class="benefit-name">Repatriation</td>
-    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'repatriation')}</td>`).join('')}
+    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'repatriation') + '</td>').join('')}
 </tr>
 ` : ''}
 ${plans.some(plan => plan.categoriesData?.mentalHealth) ? `
@@ -2934,31 +2987,31 @@ ${(() => {
 
                 <tr style="background-color: #c7d2fe;">
                     <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Members</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers}</td>`).join('')}
+                 ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.totalMembers || 0}</td>`).join('')}
                 </tr>
                 <tr style="background-color: #c7d2fe;">
                     <td class="benefit-name" style="font-weight: bold; background-color: #c7d2fe; color: #1e1b4b;">Total Premium</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.totalPremium.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                    ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.totalPremium || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">PSP Fund (37/member)</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.pspFund.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.pspFund || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">ICP Charges (24/member)</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.icpCharges.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.icpCharges || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">Policy Fee</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.policyFee.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.policyFee || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
                     <td class="benefit-name">VAT (5%)</td>
-                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.vat.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+                    ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.vat || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr class="grand-total-row" style="background-color: #22c55e;">
                     <td style="font-size: 11px; font-weight: bold; background-color: #16a34a; color: #fff;">GRAND TOTAL</td>
-                    ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #22c55e; color: #fff;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${plan.grandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
+              ${plans.map(plan => `<td style="text-align: center; font-size: 12px; font-weight: bold; background-color: #22c55e; color: #fff;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.grandTotal || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
         </table>
         
@@ -2986,16 +3039,17 @@ ${(() => {
 
 // -------- Benefit Section Table Component --------
 // -------- Benefit Section Table Component --------
-const BenefitSectionTable = ({ 
-  sectionTitle, 
-  benefits, 
-  categories, 
-  categoriesData, 
-  onChange, 
+const BenefitSectionTable = ({
+  sectionTitle,
+  benefits,
+  categories,
+  categoriesData,
+  onChange,
   highlightedItems,
   onHighlightChange,
   currentPlanId,
-  customFields = []
+  customFields = [],
+  onDeleteField
 }) => {
   // CHANGE 1: Fixed Copy function to work immediately when categories already have data
 const handleCopyFromFirst = () => {
@@ -3076,26 +3130,38 @@ const handleCopyFromFirst = () => {
           <tbody>
             {/* Render regular benefits */}
             {regularBenefits.map((benefit, index) => (
-              <tr key={benefit.field} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+<tr key={benefit.field} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                 <td className="p-2 border-r-2 border-gray-300 font-medium text-gray-700 sticky left-0 bg-inherit z-10">
                   <div className="flex items-center justify-between">
                     <span>{benefit.label}</span>
-                    {benefit.canHighlight && (
-                      <label className="flex items-center ml-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={highlightedItems[currentPlanId || 'draft']?.[benefit.field] || false}
-                          onChange={(e) => onHighlightChange(benefit.field, e.target.checked)}
-                          className="w-3 h-3 text-yellow-500 focus:ring-1 focus:ring-yellow-500"
-                        />
-                        <span className="ml-1 text-yellow-600">
-                          {highlightedItems[currentPlanId || 'draft']?.[benefit.field] ? '★' : '☆'}
-                        </span>
-                      </label>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {benefit.canHighlight && (
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={highlightedItems[currentPlanId || 'draft']?.[benefit.field] || false}
+                            onChange={(e) => onHighlightChange(benefit.field, e.target.checked)}
+                            className="w-3 h-3 text-yellow-500 focus:ring-1 focus:ring-yellow-500"
+                          />
+                          <span className="ml-1 text-yellow-600">
+                            {highlightedItems[currentPlanId || 'draft']?.[benefit.field] ? '★' : '☆'}
+                          </span>
+                        </label>
+                      )}
+                      {onDeleteField && (
+                        <button
+                          type="button"
+                          onClick={() => onDeleteField(benefit.field)}
+                          className="text-red-600 hover:text-red-800 text-lg font-bold px-1 leading-none hover:bg-red-100 rounded"
+                          title={`Remove ${benefit.label}`}
+                        >
+                          −
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </td>
-{categories.map(category => {
+                {categories.map(category => {
   // Apply default value if field is empty and has a default
   const storedValue = categoriesData[benefit.field]?.[category] || '';
   const currentDropdownValue = storedValue || (benefit.defaultValue || '');
@@ -4072,11 +4138,32 @@ const [currentPlan, setCurrentPlan] = useState({
   const [highlightedItems, setHighlightedItems] = useState({});
   const [customFields, setCustomFields] = useState([]);
   const [newFieldName, setNewFieldName] = useState('');
+  const [newFieldSection, setNewFieldSection] = useState('Other Benefits');
   const [showHistoryManager, setShowHistoryManager] = useState(false);
   const [isEditingComparison, setIsEditingComparison] = useState(false);
   const [currentComparisonId, setCurrentComparisonId] = useState(null);
   const [history, setHistory] = useState([]);
-  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+const [showTOBUploader, setShowTOBUploader] = useState(false);
+const [editingTOBPlan, setEditingTOBPlan] = useState(null);
+const [showTOBRecords, setShowTOBRecords] = useState(false);
+const [tobRecords, setTobRecords] = useState([]);
+  const [hideProviderNames, setHideProviderNames] = useState({});
+const [hiddenFields, setHiddenFields] = useState([]);
+const [hideBrokerBranding, setHideBrokerBranding] = useState(false);
+const [hideFirstPage, setHideFirstPage] = useState(false);
+
+  // Function to delete a field from the current plan (used by BenefitSectionTable)
+  const deleteField = (fieldKey) => {
+    setCurrentPlan(prev => {
+      const newCategoriesData = { ...prev.categoriesData };
+      delete newCategoriesData[fieldKey];
+      return {
+        ...prev,
+        categoriesData: newCategoriesData
+      };
+    });
+  };
 
   useEffect(() => {
     loadHistory();
@@ -4636,9 +4723,16 @@ console.log('==================');
     }
   };
 
-  const editPlan = (plan) => {
-    setPlanType(plan.planType || 'SME');
-    setCurrentPlan(plan);
+const editPlan = (plan) => {
+    // If it's a TOB plan, open the TOB modal for editing
+    if (plan.isFromTOB) {
+      setEditingTOBPlan(plan);
+      setShowTOBUploader(true);
+    } else {
+      // Regular plan - edit in form
+      setPlanType(plan.planType || 'SME');
+      setCurrentPlan(plan);
+    }
   };
 
   const deletePlan = (id) => {
@@ -4676,36 +4770,93 @@ console.log('==================');
     alert(`✅ Plan duplicated successfully! "${plan.providerName}" has been copied.`);
   };
 
+  // Save TOB plan to records
+  const saveTOBToRecords = (plan) => {
+    const tobRecord = {
+      ...plan,
+      savedAt: new Date().toISOString(),
+      savedBy: user?.email || 'Unknown',
+      savedByName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Unknown',
+    };
+    setTobRecords(prev => {
+      const updated = [...prev, tobRecord];
+      localStorage.setItem('tobRecords', JSON.stringify(updated));
+      return updated;
+    });
+    alert('✅ TOB plan saved to Records!');
+    };
+
+    // Use TOB record in comparison
+    const useTOBRecord = (record) => {
+      const newPlan = {
+        ...record,
+        id: Date.now(),
+        reusedFrom: record.id,
+      };
+      setPlans(prev => [...prev, newPlan]);
+      setShowTOBRecords(false);
+      alert('✅ TOB plan added to comparison!');
+    };
+
+  // Delete TOB record
+  const deleteTOBRecord = (recordId) => {
+    if (!confirm('Delete this TOB record?')) return;
+    setTobRecords(prev => {
+      const updated = prev.filter(r => r.id !== recordId);
+      localStorage.setItem('tobRecords', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   const saveAndDownload = async () => {
     if (!companyInfo.companyName) {
-      alert('Please enter company name');
-      return;
-    }
-    if (plans.length === 0) {
-      alert('Please add at least one plan');
-      return;
-    }
+        alert('Please enter company name');
+        return;
+      }
+      if (plans.length === 0) {
+        alert('Please add at least one plan');
+        return;
+      }
 
-    const referenceNumber = isEditingComparison ? 
-      history.find(h => h.id === currentComparisonId)?.referenceNumber || generateReferenceNumber() 
-      : generateReferenceNumber();
-    
-    const htmlContent = generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber, highlightedPlanId, highlightedItems, customFields);
-    const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
-    downloadHTMLFile(htmlContent, fileName);
-    
-   const comparison = {
-      companyName: companyInfo.companyName,
-      referenceNumber,
-      plans,
-      companyInfo,
-      advisorComment,
-      highlightedPlanId,
-      highlightedItems,
-      customFields,
-      htmlContent: htmlContent,
-    };
-    
+      const referenceNumber = isEditingComparison ? 
+        history.find(h => h.id === currentComparisonId)?.referenceNumber || generateReferenceNumber() 
+        : generateReferenceNumber();
+      
+// Sort plans: Renewal plans first, then others
+  const sortedPlans = [...plans].sort((a, b) => {
+    if (a.isRenewal && !b.isRenewal) return -1;
+    if (!a.isRenewal && b.isRenewal) return 1;
+    return 0;
+  });
+  const htmlContent = generateHTMLContent(
+    sortedPlans,
+    companyInfo, 
+    advisorComment, 
+    referenceNumber, 
+    highlightedPlanId, 
+    highlightedItems, 
+    customFields,
+    !hideFirstPage,
+    { hideProviderNames, hiddenFields, hideBrokerBranding }
+  );
+      const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
+      downloadHTMLFile(htmlContent, fileName);
+      
+const comparison = {
+        companyName: companyInfo.companyName,
+        referenceNumber,
+        plans,
+        companyInfo,
+        advisorComment,
+        highlightedPlanId,
+        highlightedItems,
+        customFields,
+        createdBy: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Unknown',
+        createdByEmail: user?.email || null,
+        isFromTOB: plans.some(p => p.isFromTOB),
+        date: new Date().toISOString(),
+      };  
+      
     try {
       if (isEditingComparison && currentComparisonId) {
         await updateComparison(currentComparisonId, comparison, user);
@@ -4731,19 +4882,17 @@ console.log('==================');
     setHighlightedPlanId(planId === highlightedPlanId ? null : planId);
   };
 
-  const addCustomField = () => {
+const addCustomField = () => {
   if (newFieldName.trim()) {
     const fieldKey = `custom_${Date.now()}`;
-    setCustomFields([...customFields, { key: fieldKey, label: newFieldName.trim() }]);
+    setCustomFields([...customFields, { key: fieldKey, label: newFieldName.trim(), section: newFieldSection }]);
     setNewFieldName('');
-    
     // Initialize the custom field for all existing plans with empty values for each category
     setPlans(plans.map(plan => {
       const initialData = {};
       plan.selectedCategories.forEach(cat => {
         initialData[cat] = '';
       });
-      
       return {
         ...plan,
         categoriesData: {
@@ -4986,7 +5135,17 @@ const deleteComparison = async (id) => {
       : generateReferenceNumber();
     
     // Generate HTML without first page
-    const htmlContent = generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber, highlightedPlanId, highlightedItems, customFields, false);
+const htmlContent = generateHTMLContent(
+  plans, 
+  companyInfo, 
+  advisorComment, 
+  referenceNumber, 
+  highlightedPlanId, 
+  highlightedItems, 
+  customFields, 
+  !hideFirstPage,
+  { hideProviderNames, hiddenFields, hideBrokerBranding }
+);
     
     // Open in new tab for preview
     const newWindow = window.open();
@@ -5441,10 +5600,10 @@ const showEditableEnhancedBasicFields = () => {
   );
 };
 
-  const { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits } = 
-  (planType === 'SME' || planType === 'ENHANCED_CUSTOM') ? getSMEBenefits() : 
+ const { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits } =
+  (planType === 'SME' || planType === 'ENHANCED_CUSTOM' || planType === 'ENHANCED_BASIC') ? getSMEBenefits() :
   planType === 'DHA_MANUAL' ? getDHAManualBenefits() :
-  { companyInfoBenefits: [], inpatientBenefits: [], outpatientBenefits: [], otherBenefits: [] };
+  { companyInfoBenefits: [], inpatientBenefits: [], outpatientBenefits: [], otherBenefits: [] };  
 
 const { basicBenefits } = planType === 'BASIC' ? getBasicBenefits() : { basicBenefits: [] };
 
@@ -5454,18 +5613,58 @@ return (
     <UserHeader onOpenAdmin={() => setShowAdminDashboard(true)} />
     
     {/* ADMIN DASHBOARD MODAL */}
-    {showAdminDashboard && (
-      <AdminDashboard 
-        onClose={() => setShowAdminDashboard(false)}
-      />
-    )}
+ {showAdminDashboard && (
+  <AdminDashboard
+    onClose={() => setShowAdminDashboard(false)}
+    onLoadComparison={(comparison) => {
+      // Load comparison data into the form
+      setPlans(comparison.plans || []);
+      setCompanyInfo(comparison.companyInfo || { companyName: '', tpa: 'NAS', tpaManual: '', networkSelection: 'GN', networkManual: '' });
+      setAdvisorComment(comparison.advisorComment || '');
+      setHighlightedPlanId(comparison.highlightedPlanId || null);
+      setHighlightedItems(comparison.highlightedItems || {});
+      setCustomFields(comparison.customFields || []);
+      setIsEditingComparison(true);
+      setCurrentComparisonId(comparison.id);
+      setShowAdminDashboard(false);
+      alert('✅ Comparison loaded! You can now edit and re-save.');
+    }}
+  />
+)}
     
     {/* MAIN CONTENT */}
     <div className="p-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {/* LEFT COLUMN - FORM */}
     <div className="bg-white rounded-xl p-5 shadow-2xl">
-      <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200">
+      {/* DISPLAY OPTIONS */}
+<div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-lg border-2 border-amber-200">
+  <h3 className="font-bold text-amber-800 mb-3 text-sm">⚙️ DISPLAY OPTIONS</h3>
+  <div className="flex flex-wrap gap-4">
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={hideBrokerBranding}
+        onChange={(e) => setHideBrokerBranding(e.target.checked)}
+        className="w-4 h-4 text-amber-600"
+      />
+      <span className="text-sm text-gray-700">Hide Broker Logo & Mascot</span>
+    </label>
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={hideFirstPage}
+        onChange={(e) => setHideFirstPage(e.target.checked)}
+        className="w-4 h-4 text-amber-600"
+      />
+      <span className="text-sm text-gray-700">Hide Cover Page (Reduces Size)</span>
+    </label>
+  </div>
+  
+ 
+
+</div>
+      <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200"> 
   <h3 className="font-bold text-indigo-800 mb-3 text-sm">📑 PLAN TYPE SELECTION</h3>
   
   <div className="flex flex-wrap gap-3 mb-4">
@@ -5531,16 +5730,30 @@ return (
   </div>
 </div>
 
-      <div className="flex justify-between items-center mb-4">
+<div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-indigo-700">
           {currentPlan.id ? '✏️ Edit Plan' : '➕ Add New Plan'} ({planType})
         </h2>
-        <button
-          onClick={() => setIsFormVisible(!isFormVisible)}
-          className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg hover:bg-indigo-200 font-bold text-sm"
-        >
-          {isFormVisible ? '▲ Collapse' : '▼ Expand'}
-        </button>
+ <div className="flex gap-2">
+          <button
+            onClick={() => setShowTOBUploader(true)}
+            className="bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 font-bold text-sm"
+          >
+            📄 Upload TOB
+          </button>
+          <button
+            onClick={() => setShowTOBRecords(true)}
+            className="bg-amber-500 text-white px-3 py-1 rounded-lg hover:bg-amber-600 font-bold text-sm"
+          >
+            📁 Records ({tobRecords.length})
+          </button>
+          <button
+            onClick={() => setIsFormVisible(!isFormVisible)}
+            className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg hover:bg-indigo-200 font-bold text-sm"
+          >
+            {isFormVisible ? '▲ Collapse' : '▼ Expand'}
+          </button>
+        </div>
       </div>
 
       {isFormVisible && (
@@ -5768,17 +5981,20 @@ return (
           {/* BASIC PLAN BENEFITS TABLE */}
           {planType === 'BASIC' && currentPlan.selectedCategories.length > 0 && (
             <div className="bg-gradient-to-r from-teal-50 to-cyan-50 p-4 rounded-lg border-2 border-teal-200">
-              <BenefitSectionTable
-                sectionTitle=""
-                benefits={basicBenefits}
-                categories={currentPlan.selectedCategories}
-                categoriesData={currentPlan.categoriesData}
-                onChange={handleCategoryDataChange}
-                highlightedItems={highlightedItems}
-                onHighlightChange={handleBenefitHighlight}
-                currentPlanId={currentPlan.id || 'draft'}
-                customFields={customFields}
-              />
+           <BenefitSectionTable
+    sectionTitle=""
+    benefits={basicBenefits}
+    categories={currentPlan.selectedCategories}
+    categoriesData={currentPlan.categoriesData}
+    onChange={handleCategoryDataChange}
+    highlightedItems={highlightedItems}
+    onHighlightChange={handleBenefitHighlight}
+    currentPlanId={currentPlan.id || 'draft'}
+    customFields={customFields}
+    onDeleteField={deleteField}
+/>
+
+
             </div>
           )}
 
@@ -5863,11 +6079,11 @@ return (
         highlightedItems={highlightedItems}
         onHighlightChange={handleBenefitHighlight}
         currentPlanId={currentPlan.id || 'draft'}
-        customFields={[]}
+        customFields={customFields}
+        onDeleteField={deleteField}
       />
     </div>
-
-<div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border-2 border-blue-200">
       <BenefitSectionTable
         sectionTitle="🏥 INPATIENT BENEFITS"
         benefits={inpatientBenefits}
@@ -5877,11 +6093,11 @@ return (
         highlightedItems={highlightedItems}
         onHighlightChange={handleBenefitHighlight}
         currentPlanId={currentPlan.id || 'draft'}
-        customFields={[]}
+        customFields={customFields}
+        onDeleteField={deleteField}
       />
     </div>
-
-<div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border-2 border-purple-200">
+    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border-2 border-purple-200">
       <BenefitSectionTable
         sectionTitle="👨‍⚕️ OUTPATIENT BENEFITS"
         benefits={outpatientBenefits}
@@ -5891,11 +6107,11 @@ return (
         highlightedItems={highlightedItems}
         onHighlightChange={handleBenefitHighlight}
         currentPlanId={currentPlan.id || 'draft'}
-        customFields={[]}
+        customFields={customFields}
+        onDeleteField={deleteField}
       />
     </div>
-
-<div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border-2 border-amber-200">
+    <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-4 rounded-lg border-2 border-amber-200">
       <BenefitSectionTable
         sectionTitle="🏅 OTHER BENEFITS"
         benefits={otherBenefits}
@@ -5905,7 +6121,8 @@ return (
         highlightedItems={highlightedItems}
         onHighlightChange={handleBenefitHighlight}
         currentPlanId={currentPlan.id || 'draft'}
-        customFields={[]}
+        customFields={customFields}
+        onDeleteField={deleteField}
       />
     </div>
   </>
@@ -5982,22 +6199,24 @@ return (
                     </div>
                   </div>
 
-            {currentPlan.selectedCategories.length > 0 && (
-                    <BenefitSectionTable
-                      sectionTitle="Company Coverage Details"
-                      benefits={companyInfoBenefits}
-                      categories={currentPlan.selectedCategories.includes('LSB & HSB') ? ['LSB & HSB'] : currentPlan.selectedCategories}
-                      categoriesData={currentPlan.categoriesData}
-                      onChange={handleCategoryDataChange}
-                      highlightedItems={highlightedItems}
-                      onHighlightChange={handleBenefitHighlight}
-                      currentPlanId={currentPlan.id || 'draft'}
-                    />
+{currentPlan.selectedCategories.length > 0 && (
+                <BenefitSectionTable
+                  sectionTitle="Company Coverage Details"
+                  benefits={companyInfoBenefits}
+                  categories={currentPlan.selectedCategories}
+                  categoriesData={currentPlan.categoriesData}
+                  onChange={handleCategoryDataChange}
+                  highlightedItems={highlightedItems}
+                  onHighlightChange={handleBenefitHighlight}
+                  currentPlanId={currentPlan.id || 'draft'}
+                  customFields={customFields}
+                  onDeleteField={deleteField}
+                />
                   )}
                 </>
               )}
 
-             {/* Plan Tag textarea for SME and ENHANCED_CUSTOM - replaces Recommended/Renewal checkboxes */}
+             {/* Plan Tag textarea for SME and ENHANCED_CUSTOM */}
 {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
   <div className="mt-3">
     <label className="block text-xs font-bold text-gray-700 mb-1">
@@ -6012,37 +6231,31 @@ return (
     />
   </div>
 )}
-
-{/* Keep Recommended/Renewal checkboxes for BASIC plans only */}
-{planType === 'BASIC' && (
-  <div className="flex gap-3 mt-3">
-    <label className="flex items-center space-x-2 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={currentPlan.isRecommended}
-        onChange={(e) => handleInputChange('isRecommended', e.target.checked)}
-        className="w-4 h-4 text-green-600 focus:ring-2 focus:ring-green-500"
-      />
-      <span className="text-xs font-bold text-green-700">⭐ Recommended</span>
-    </label>
-
-    <label className="flex items-center space-x-2 cursor-pointer">
-      <input
-        type="checkbox"
-        checked={currentPlan.isRenewal}
-        onChange={(e) => handleInputChange('isRenewal', e.target.checked)}
-        className="w-4 h-4 text-yellow-600 focus:ring-2 focus:ring-yellow-500"
-      />
-      <span className="text-xs font-bold text-yellow-700">🔄 Renewal</span>
-    </label>
-  </div>
-)}
+{/* Recommended/Renewal checkboxes for ALL plan types */}
+<div className="flex gap-3 mt-3">
+  <label className="flex items-center space-x-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={currentPlan.isRecommended}
+      onChange={(e) => handleInputChange('isRecommended', e.target.checked)}
+      className="w-4 h-4 text-green-600 focus:ring-2 focus:ring-green-500"
+    />
+    <span className="text-xs font-bold text-green-700">⭐ Recommended</span>
+  </label>
+  <label className="flex items-center space-x-2 cursor-pointer">
+    <input
+      type="checkbox"
+      checked={currentPlan.isRenewal}
+      onChange={(e) => handleInputChange('isRenewal', e.target.checked)}
+      className="w-4 h-4 text-orange-600 focus:ring-2 focus:ring-orange-500"
+    />
+    <span className="text-xs font-bold text-orange-700">🔄 Renewal</span>
+  </label>
+</div>
               </div>
             </div>
           )}
-
-
-          {/* SME and ENHANCED_CUSTOM PLAN BENEFITS */}
+{/* SME and ENHANCED_CUSTOM PLAN BENEFITS - NOT for ENHANCED_BASIC (DHA Predefined) */}
           {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && currentPlan.selectedCategories.length > 0 && (
             <>
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border-2 border-green-200">
@@ -6056,9 +6269,9 @@ return (
                   onHighlightChange={handleBenefitHighlight}
                   currentPlanId={currentPlan.id || 'draft'}
                   customFields={customFields}
+                  onDeleteField={deleteField}
                 />
               </div>
-
               <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg border-2 border-blue-200">
                 <BenefitSectionTable
                   sectionTitle="👨‍⚕️ OUTPATIENT BENEFITS"
@@ -6070,9 +6283,9 @@ return (
                   onHighlightChange={handleBenefitHighlight}
                   currentPlanId={currentPlan.id || 'draft'}
                   customFields={customFields}
+                  onDeleteField={deleteField}
                 />
               </div>
-
               <div className="bg-gradient-to-r from-pink-50 to-rose-50 p-4 rounded-lg border-2 border-pink-200">
                 <BenefitSectionTable
                   sectionTitle="🏅 OTHER BENEFITS"
@@ -6084,6 +6297,7 @@ return (
                   onHighlightChange={handleBenefitHighlight}
                   currentPlanId={currentPlan.id || 'draft'}
                   customFields={customFields}
+                  onDeleteField={deleteField}
                 />
               </div>
             </>
@@ -6459,20 +6673,30 @@ return (
           <span className="text-lg">✏️</span> CUSTOM FIELDS
         </h3>
         
-        <div className="space-y-3">
+ <div className="space-y-3">
           <div className="flex gap-2">
             <input
               type="text"
               value={newFieldName}
               onChange={(e) => setNewFieldName(e.target.value)}
               className="flex-1 p-2 border-2 border-cyan-300 rounded-lg text-xs focus:ring-2 focus:ring-cyan-500"
-              placeholder="Enter new field name..."
+              placeholder="Field name (e.g., Wellness Benefits)"
             />
+            <select
+              value={newFieldSection}
+              onChange={(e) => setNewFieldSection(e.target.value)}
+              className="p-2 border-2 border-cyan-300 rounded-lg text-xs focus:ring-2 focus:ring-cyan-500 bg-white"
+            >
+              <option value="Company Information">Company Information</option>
+              <option value="Inpatient Benefits">Inpatient Benefits</option>
+              <option value="Outpatient Benefits">Outpatient Benefits</option>
+              <option value="Other Benefits">Other Benefits</option>
+            </select>
             <button
               onClick={addCustomField}
               className="bg-cyan-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-cyan-700 transition text-xs"
             >
-              Add Field
+              + Add
             </button>
           </div>
           
@@ -6562,14 +6786,16 @@ return (
           {plans.map((plan) => (
             <div 
               key={plan.id} 
-              className={`border-2 rounded-lg p-4 transition ${
-                plan.id === highlightedPlanId 
-                  ? 'border-yellow-400 bg-yellow-50' 
-                  : plan.isRecommended 
-                    ? 'border-green-400 bg-green-50' 
-                    : plan.isRenewal 
-                      ? 'border-orange-400 bg-orange-50' 
-                      : 'border-gray-200 bg-gray-50'
+             className={`border-2 rounded-lg p-4 transition ${
+                plan.id === highlightedPlanId
+                  ? 'border-yellow-400 bg-yellow-50'
+                  : plan.isRecommended
+                    ? 'border-green-400 bg-green-50'
+                    : plan.isRenewal
+                      ? 'border-orange-400 bg-orange-50'
+                      : plan.isFromTOB
+                        ? 'border-emerald-400 bg-emerald-50'
+                        : 'border-gray-200 bg-gray-50'
               }`}
             >
               <div className="flex justify-between items-start">
@@ -6579,6 +6805,9 @@ return (
   {plan.providerName}
   {plan.planTag && <span className="text-purple-600"> - {plan.planTag}</span>}
 </h3>
+               {plan.isFromTOB && (
+                      <span className="bg-emerald-600 text-white px-2 py-1 rounded text-xs font-bold">📄 TOB</span>
+                    )}
                     {plan.isRecommended && (
                       <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">⭐ Recommended</span>
                     )}
@@ -6589,6 +6818,19 @@ return (
                       <span className="bg-yellow-600 text-white px-2 py-1 rounded text-xs font-bold">🌟 Highlighted</span>
                     )}
                   </div>
+                  {/* Hide Provider Name Toggle */}
+                  <label className="flex items-center gap-1 mt-1 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hideProviderNames[plan.id] || false}
+                      onChange={(e) => setHideProviderNames(prev => ({
+                        ...prev,
+                        [plan.id]: e.target.checked
+                      }))}
+                      className="w-3 h-3"
+                    />
+                    <span className="text-xs text-gray-500">Hide name in output</span>
+                  </label>
                   
                   <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                     <div>
@@ -6663,6 +6905,237 @@ return (
     onTemplateSelect={handleTemplateSelect}
     onClose={() => setShowDHAEnhancedSelector(false)}
   />
+)}
+
+{/* TOB UPLOADER MODAL */}
+{showTOBUploader && (
+  <TOBUploader
+    editPlan={editingTOBPlan}
+    user={user}
+    onDataExtracted={(extractedData) => {
+      if (extractedData.isEditing && extractedData.originalPlanId) {
+        // Update existing plan
+        setPlans(prev => prev.map(p => 
+          p.id === extractedData.originalPlanId 
+            ? {
+                ...p,
+                providerName: extractedData.providerName || p.providerName,
+                tpa: extractedData.tpa || p.tpa,
+                categoriesData: {
+                  network: extractedData.network || '',
+                  areaOfCover: extractedData.areaOfCover || '',
+                  aggregateLimit: extractedData.aggregateLimit || '',
+                  medicalUnderwriting: extractedData.medicalUnderwriting || '',
+                  roomType: extractedData.roomType || '',
+                  diagnosticTests: extractedData.diagnosticTests || '',
+                  drugsMedicines: extractedData.drugsMedicines || '',
+                  consultantFees: extractedData.consultantFees || '',
+                  organTransplant: extractedData.organTransplant || '',
+                  kidneyDialysis: extractedData.kidneyDialysis || '',
+                  inpatientCopay: extractedData.inpatientCopay || '',
+                  referralType: extractedData.referralType || '',
+                  outpatientConsultation: extractedData.outpatientConsultation || '',
+                  diagnosticLabs: extractedData.diagnosticLabs || '',
+                  pharmacyLimit: extractedData.pharmacyLimit || '',
+                  pharmacyCopay: extractedData.pharmacyCopay || '',
+                  medicineType: extractedData.medicineType || '',
+                  prescribedPhysiotherapy: extractedData.prescribedPhysiotherapy || '',
+                  inPatientMaternity: extractedData.inPatientMaternity || '',
+                  outPatientMaternity: extractedData.outPatientMaternity || '',
+                  routineDental: extractedData.routineDental || '',
+                  routineOptical: extractedData.routineOptical || '',
+                  repatriation: extractedData.repatriation || '',
+                  mentalHealth: extractedData.mentalHealth || '',
+                  preventiveServices: extractedData.preventiveServices || '',
+                  alternativeMedicines: extractedData.alternativeMedicines || '',
+                },
+                catAMembers: extractedData.catAMembers || '',
+                catAPremium: extractedData.catAPremium || '',
+                catBMembers: extractedData.catBMembers || '',
+                catBPremium: extractedData.catBPremium || '',
+                uploadedBy: extractedData.uploadedBy,
+                uploadedByName: extractedData.uploadedByName,
+                uploadedAt: extractedData.uploadedAt,
+                lastEditedBy: extractedData.lastEditedBy,
+                lastEditedByName: extractedData.lastEditedByName,
+                lastEditedAt: extractedData.lastEditedAt,
+              }
+            : p
+        ));
+        alert('✅ TOB plan updated!');
+      } else {
+        // Create new plan
+// Calculate premium values
+        const catAMembers = parseInt(extractedData.catAMembers) || 0;
+        const catAPremium = parseFloat(extractedData.catAPremium) || 0;
+        const catBMembers = parseInt(extractedData.catBMembers) || 0;
+        const catBPremium = parseFloat(extractedData.catBPremium) || 0;
+        const totalMembers = catAMembers + catBMembers;
+        const totalPremium = (catAMembers * catAPremium) + (catBMembers * catBPremium);
+        const pspFund = totalMembers * 37;
+        const icpCharges = totalMembers * 24;
+        const grandTotal = totalPremium + pspFund + icpCharges;
+
+        const newTOBPlan = {
+          id: Date.now(),
+          providerName: extractedData.providerName || 'TOB Plan',
+          tpa: extractedData.tpa || '',
+          planType: 'SME',
+          isFromTOB: true,
+          selectedCategories: ['CAT A'],
+          // Premium calculations
+          totalPremium: totalPremium || 0,
+          pspFund: pspFund || 0,
+          icpCharges: icpCharges || 0,
+          grandTotal: grandTotal || 0,
+          totalMembers: totalMembers || 0,
+          categoriesData: {
+            network: extractedData.network || '',
+            areaOfCover: extractedData.areaOfCover || '',
+            aggregateLimit: extractedData.aggregateLimit || '',
+            medicalUnderwriting: extractedData.medicalUnderwriting || '',
+            roomType: extractedData.roomType || '',
+            diagnosticTests: extractedData.diagnosticTests || '',
+            drugsMedicines: extractedData.drugsMedicines || '',
+            consultantFees: extractedData.consultantFees || '',
+            organTransplant: extractedData.organTransplant || '',
+            kidneyDialysis: extractedData.kidneyDialysis || '',
+            inpatientCopay: extractedData.inpatientCopay || '',
+            referralType: extractedData.referralType || '',
+            outpatientConsultation: extractedData.outpatientConsultation || '',
+            diagnosticLabs: extractedData.diagnosticLabs || '',
+            pharmacyLimit: extractedData.pharmacyLimit || '',
+            pharmacyCopay: extractedData.pharmacyCopay || '',
+            medicineType: extractedData.medicineType || '',
+            prescribedPhysiotherapy: extractedData.prescribedPhysiotherapy || '',
+            inPatientMaternity: extractedData.inPatientMaternity || '',
+            outPatientMaternity: extractedData.outPatientMaternity || '',
+            routineDental: extractedData.routineDental || '',
+            routineOptical: extractedData.routineOptical || '',
+            repatriation: extractedData.repatriation || '',
+            mentalHealth: extractedData.mentalHealth || '',
+            preventiveServices: extractedData.preventiveServices || '',
+            alternativeMedicines: extractedData.alternativeMedicines || '',
+          },
+    catAMembers: catAMembers,
+          catAPremium: catAPremium,
+          catBMembers: catBMembers,
+          catBPremium: catBPremium,
+          uploadedBy: extractedData.uploadedBy,
+          uploadedByName: extractedData.uploadedByName,
+          uploadedAt: extractedData.uploadedAt,
+          lastEditedBy: extractedData.lastEditedBy,
+          lastEditedByName: extractedData.lastEditedByName,
+          lastEditedAt: extractedData.lastEditedAt,
+        };
+   setPlans(prev => [...prev, newTOBPlan]);
+        // Also save to TOB records for reuse
+        setTobRecords(prev => {
+          const updated = [...prev, { ...newTOBPlan, savedAt: new Date().toISOString(), savedBy: user?.email || 'Unknown', savedByName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Unknown' }];
+          localStorage.setItem('tobRecords', JSON.stringify(updated));
+          return updated;
+        });
+        alert('✅ TOB plan added to comparison and saved to Records!');
+      }
+      setEditingTOBPlan(null);
+    }}
+    onClose={() => {
+      setShowTOBUploader(false);
+      setEditingTOBPlan(null);
+    }}
+  />
+)}
+
+{/* TOB RECORDS MODAL */}
+{showTOBRecords && (
+  <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-white">📁 TOB Records</h2>
+            <p className="text-amber-100 text-sm">Saved TOB plans that can be reused in comparisons</p>
+          </div>
+          <button 
+            onClick={() => setShowTOBRecords(false)}
+            className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-lg"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        {tobRecords.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📭</div>
+            <h3 className="text-xl font-bold text-gray-600">No TOB Records Yet</h3>
+            <p className="text-gray-500 mt-2">Upload a TOB and it will be saved here for reuse</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {tobRecords.map((record) => (
+              <div 
+                key={record.id} 
+                className="bg-emerald-50 border-2 border-emerald-200 rounded-xl p-4 hover:shadow-lg transition"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-lg text-gray-800">{record.providerName}</h3>
+                      <span className="bg-emerald-600 text-white text-xs px-2 py-0.5 rounded-full">📄 TOB</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-600">
+                      <div><strong>Network:</strong> {record.categoriesData?.network || '-'}</div>
+                      <div><strong>Annual Limit:</strong> {record.categoriesData?.aggregateLimit || '-'}</div>
+                      <div><strong>Saved by:</strong> {record.savedByName || 'Unknown'}</div>
+                      <div><strong>Saved on:</strong> {record.savedAt ? new Date(record.savedAt).toLocaleDateString() : '-'}</div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => useTOBRecord(record)}
+                      className="bg-emerald-600 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-emerald-700"
+                    >
+                      ➕ Use
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTOBPlan(record);
+                        setShowTOBUploader(true);
+                        setShowTOBRecords(false);
+                      }}
+                      className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-blue-700"
+                    >
+                      ✏️ Edit
+                    </button>
+                    <button
+                      onClick={() => deleteTOBRecord(record.id)}
+                      className="bg-red-600 text-white px-3 py-2 rounded-lg font-bold text-sm hover:bg-red-700"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Footer */}
+      <div className="border-t p-4 bg-gray-50">
+        <button
+          onClick={() => setShowTOBRecords(false)}
+          className="w-full py-2 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 )}
 </div>
     </div>

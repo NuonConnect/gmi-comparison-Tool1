@@ -238,14 +238,19 @@ const AdminDashboard = ({ onClose, onLoadComparison }) => {
             ) : (
               <div className="space-y-3">
                 {filteredComparisons.map((comp, idx) => (
-                  <div key={idx} className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-indigo-300 transition">
+               <div key={idx} className={`border-2 rounded-xl p-4 hover:shadow-lg transition ${comp.isFromTOB ? 'bg-emerald-50 border-emerald-300 hover:border-emerald-500' : 'bg-white border-gray-200 hover:border-indigo-300'}`}>
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <h3 className="font-bold text-lg text-gray-800">{comp.companyName || 'Unknown Company'}</h3>
+                  <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-lg text-gray-800">{comp.companyName || 'Unknown Company'}</h3>
+                          {comp.isFromTOB && (
+                            <span className="bg-emerald-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">📄 TOB</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-indigo-600 text-sm">👤 {comp.createdBy || 'Unknown'}</span>
-                          {comp.createdByEmail && (
-                            <span className="text-gray-400 text-xs">({comp.createdByEmail})</span>
+                <span className="text-indigo-600 text-sm">👤 {comp.createdBy || comp.user_email?.split('@')[0] || 'Unknown'}</span>
+                          {(comp.createdByEmail || comp.user_email) && (
+                            <span className="text-gray-400 text-xs">({comp.createdByEmail || comp.user_email})</span>
                           )}
                         </div>
                         <div className="flex gap-4 mt-2 text-xs text-gray-500">
