@@ -4165,8 +4165,9 @@ const [hideFirstPage, setHideFirstPage] = useState(false);
     });
   };
 
-  useEffect(() => {
+useEffect(() => {
     loadHistory();
+    loadTOBRecords();
   }, []);
 
   useEffect(() => {
@@ -4770,21 +4771,19 @@ const editPlan = (plan) => {
     alert(`✅ Plan duplicated successfully! "${plan.providerName}" has been copied.`);
   };
 
-  // Save TOB plan to records
-  const saveTOBToRecords = (plan) => {
+// Save TOB plan to records (cloud storage)
+  const saveTOBToRecords = async (plan) => {
     const tobRecord = {
       ...plan,
       savedAt: new Date().toISOString(),
       savedBy: user?.email || 'Unknown',
       savedByName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Unknown',
     };
-    setTobRecords(prev => {
-      const updated = [...prev, tobRecord];
-      localStorage.setItem('tobRecords', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = [...tobRecords, tobRecord];
+    setTobRecords(updated);
+    await saveTOBRecordsToCloud(updated);
     alert('✅ TOB plan saved to Records!');
-    };
+  };
 
     // Use TOB record in comparison
     const useTOBRecord = (record) => {
@@ -4798,14 +4797,12 @@ const editPlan = (plan) => {
       alert('✅ TOB plan added to comparison!');
     };
 
-  // Delete TOB record
-  const deleteTOBRecord = (recordId) => {
+// Delete TOB record (cloud storage)
+  const deleteTOBRecord = async (recordId) => {
     if (!confirm('Delete this TOB record?')) return;
-    setTobRecords(prev => {
-      const updated = prev.filter(r => r.id !== recordId);
-      localStorage.setItem('tobRecords', JSON.stringify(updated));
-      return updated;
-    });
+    const updated = tobRecords.filter(r => r.id !== recordId);
+    setTobRecords(updated);
+    await saveTOBRecordsToCloud(updated);
   };
 
   const saveAndDownload = async () => {
@@ -5105,6 +5102,32 @@ const loadHistory = async () => {
     } catch (error) {
       console.error('Error loading history:', error);
       setHistory([]);
+    }
+  };
+// Load TOB Records from cloud (global for all users)
+  const loadTOBRecords = async () => {
+    try {
+      const response = await fetch('/api/tob-plans');
+      if (response.ok) {
+        const records = await response.json();
+        setTobRecords(records || []);
+      }
+    } catch (error) {
+      console.error('Error loading TOB records:', error);
+      setTobRecords([]);
+    }
+  };
+
+  // Save TOB Records to cloud
+  const saveTOBRecordsToCloud = async (records) => {
+    try {
+      await fetch('/api/tob-plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(records)
+      });
+    } catch (error) {
+      console.error('Error saving TOB records:', error);
     }
   };
 
@@ -7028,13 +7051,12 @@ return (
           lastEditedByName: extractedData.lastEditedByName,
           lastEditedAt: extractedData.lastEditedAt,
         };
-   setPlans(prev => [...prev, newTOBPlan]);
-        // Also save to TOB records for reuse
-        setTobRecords(prev => {
-          const updated = [...prev, { ...newTOBPlan, savedAt: new Date().toISOString(), savedBy: user?.email || 'Unknown', savedByName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Unknown' }];
-          localStorage.setItem('tobRecords', JSON.stringify(updated));
-          return updated;
-        });
+setPlans(prev => [...prev, newTOBPlan]);
+        // Also save to TOB records for reuse (cloud storage)
+        const tobRecord = { ...newTOBPlan, savedAt: new Date().toISOString(), savedBy: user?.email || 'Unknown', savedByName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Unknown' };
+        const updatedRecords = [...tobRecords, tobRecord];
+        setTobRecords(updatedRecords);
+        saveTOBRecordsToCloud(updatedRecords);
         alert('✅ TOB plan added to comparison and saved to Records!');
       }
       setEditingTOBPlan(null);
