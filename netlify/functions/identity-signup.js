@@ -5,7 +5,11 @@
 // Add admin emails here
 const ADMIN_EMAILS = [
   'it2@nsib.ae',
+  'it@nsib.ae',
   'bp1@nsib.ae',
+  'medical@nsib.ae',
+  'medical1@nsib.ae',
+  'medical2@nsib.ae',
   
   // Add more admin emails as needed
 ];

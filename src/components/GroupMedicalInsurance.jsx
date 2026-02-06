@@ -252,7 +252,7 @@ const BASIC_TPA_NETWORK_MAPPING = {
   'HEALTHNET': [ 'Basic Network']
 };
 
-const ROOM_TYPE_OPTIONS = ['PRIVATE', 'SEMI PRIVATE', 'SHARED ROOM', 'WARD', 'Suit room'];
+const ROOM_TYPE_OPTIONS = ['PRIVATE', 'SEMI PRIVATE', 'SHARED ROOM', 'WARD', 'Suit room', 'Other'];
 const COVERAGE_OPTIONS = [
   'Covered', 
   'Covered with 10% copay', 
@@ -5188,7 +5188,7 @@ const companyInfoBenefits = [
 
   // UPDATED: Inpatient benefits - moved IP Copay to end, added Organ Transplant and Kidney Dialysis
   const inpatientBenefits = [
-    { field: 'roomType', label: 'Room Type', options: ROOM_TYPE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+ { field: 'roomType', label: 'Room Type', options: ROOM_TYPE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'diagnosticTests', label: 'Diagnostic Tests & Procedures', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'drugsMedicines', label: 'Drugs and Medicines', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'consultantFees', label: "Consultant's, Surgeon's and Anesthetist's Fees", options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
@@ -6332,7 +6332,7 @@ return (
             
             <div className="grid grid-cols-2 gap-3">
               {/* For BASIC and ENHANCED_BASIC - show LSB/HSB or CAT A/B */}
-              {planType !== 'SME' && planType !== 'ENHANCED_CUSTOM' && (
+              {planType !== 'SME' && planType !== 'ENHANCED_CUSTOM' && planType !== 'DHA_MANUAL' && (
                 <>
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1">
