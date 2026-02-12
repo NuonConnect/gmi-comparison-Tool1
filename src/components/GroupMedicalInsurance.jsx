@@ -2401,7 +2401,7 @@ ${!hiddenFields.includes('tpa') ? `<tr>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${plan.selectedCategories?.join(', ') || 'Not specified'}</td>`).join('')}
                 </tr>
                 ` : ''}
-${!hiddenFields.includes('network') ? `
+${!hiddenFields.includes('network') && !hasDHAManualPlan ? `
                 <tr>
                     <td class="benefit-name">Network</td>
                     ${plans.map(plan => {
@@ -2411,7 +2411,7 @@ ${!hiddenFields.includes('network') ? `
                     }).join('')}
                 </tr>
                 ` : ''}
-        ${!hiddenFields.includes('areaOfCover') ? `<tr>
+        ${!hiddenFields.includes('areaOfCover') && !hasDHAManualPlan ? `<tr>
                     <td class="benefit-name">Area of Cover</td>
                     ${plans.map(plan => {
                       const areaData = plan.categoriesData?.areaOfCover || plan.categoriesData?.geographicalScope || {};
@@ -2644,22 +2644,33 @@ ${plans.some(plan => plan.categoriesData?.mentalHealth) ? `
 <!-- DHA MANUAL PLAN FIELDS - Show only if DHA Manual plans exist -->
 ${hasDHAManualPlan ? `
 <tr class="section-header">
-    <td colspan="${plans.length + 1}">DHA ENHANCED PLAN DETAILS</td>
+    <td colspan="${plans.length + 1}">COMPANY COVERAGE DETAILS</td>
 </tr>
 ${plans.some(plan => plan.categoriesData?.planName) ? generateMergedRow('Product Name', 'planName', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.aggregateLimit) ? generateMergedRow('Annual Limit', 'aggregateLimit', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.areaOfCover) ? generateMergedRow('Area of Cover', 'areaOfCover', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.network) ? generateMergedRow('Network', 'network', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.accessForOP) ? generateMergedRow('Access for OP', 'accessForOP', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.referralProcedure) ? generateMergedRow('Referral Procedure', 'referralProcedure', plans, highlightedPlanId) : ''}
+<tr class="section-header">
+    <td colspan="${plans.length + 1}">INPATIENT BENEFITS</td>
+</tr>
 ${plans.some(plan => plan.categoriesData?.intensiveCareUnit) ? generateMergedRow('Intensive Care Unit', 'intensiveCareUnit', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.diagnosticTests) ? generateMergedRow('Diagnostic Tests And Procedures', 'diagnosticTests', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.drugsMedicines) ? generateMergedRow('Drugs and Medicines', 'drugsMedicines', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.doctorConsultations) ? generateMergedRow('Doctor, Surgeon & Specialist Consultations', 'doctorConsultations', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.consultantFees) ? generateMergedRow('Consultant Fees', 'consultantFees', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.organTransplant) ? generateMergedRow('Organ Transplant', 'organTransplant', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.kidneyDialysis) ? generateMergedRow('Kidney Dialysis', 'kidneyDialysis', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.ipCoinsurance) ? generateMergedRow('IP Co-insurance', 'ipCoinsurance', plans, highlightedPlanId) : ''}
+<tr class="section-header">
+    <td colspan="${plans.length + 1}">OUTPATIENT BENEFITS</td>
+</tr>
 ${plans.some(plan => plan.categoriesData?.deductibleConsultation) ? generateMergedRow('Deductible (Consultation)', 'deductibleConsultation', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.opCoinsurance) ? generateMergedRow('OP Co-insurance', 'opCoinsurance', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.pharmacyLimit) ? generateMergedRow('Pharmacy Limit', 'pharmacyLimit', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.pharmacyCoinsurance) ? generateMergedRow('Pharmacy Co-insurance', 'pharmacyCoinsurance', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.pharmacyCopay) ? generateMergedRow('Pharmacy Co-Pay', 'pharmacyCopay', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.medicineType) ? generateMergedRow('Medicine Type', 'medicineType', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? generateMergedRow('Physiotherapy Sessions', 'prescribedPhysiotherapy', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.inPatientMaternity) ? generateMergedRow('In-Patient Maternity', 'inPatientMaternity', plans, highlightedPlanId) : ''}
@@ -4265,15 +4276,51 @@ useEffect(() => {
             newCategoriesData.aggregateLimit[cat] = 'AED 150,000';
           }
         });
-      } else {
+    } else if (prev.planType === 'DHA_MANUAL') {
+        // Apply DHA_MANUAL defaults for inpatient benefits
+        const DHA_MANUAL_DEFAULTS = {
+          intensiveCareUnit: 'Covered',
+          diagnosticTests: 'Covered',
+          drugsMedicines: 'Covered',
+          doctorConsultations: 'Covered',
+        };
         selectedCats.forEach(cat => {
           if (!prev.selectedCategories.includes(cat)) {
-            const sourceCategory = prev.selectedCategories.find(sc => 
-              Object.keys(newCategoriesData).some(field => 
+            // Apply default values for new categories
+            Object.keys(DHA_MANUAL_DEFAULTS).forEach(field => {
+              if (!newCategoriesData[field]) {
+                newCategoriesData[field] = {};
+              }
+              if (!newCategoriesData[field][cat]) {
+                newCategoriesData[field][cat] = DHA_MANUAL_DEFAULTS[field];
+              }
+            });
+            // Copy existing values from source category if available
+            const sourceCategory = prev.selectedCategories.find(sc =>
+              Object.keys(newCategoriesData).some(field =>
                 newCategoriesData[field] && newCategoriesData[field][sc]
               )
             );
-            
+            if (sourceCategory) {
+              Object.keys(newCategoriesData).forEach(field => {
+                if (typeof newCategoriesData[field] === 'object' && newCategoriesData[field][sourceCategory]) {
+                  newCategoriesData[field] = {
+                    ...newCategoriesData[field],
+                    [cat]: newCategoriesData[field][cat] || newCategoriesData[field][sourceCategory]
+                  };
+                }
+              });
+            }
+          }
+        });
+      } else {
+        selectedCats.forEach(cat => {
+          if (!prev.selectedCategories.includes(cat)) {
+            const sourceCategory = prev.selectedCategories.find(sc =>
+              Object.keys(newCategoriesData).some(field =>
+                newCategoriesData[field] && newCategoriesData[field][sc]
+              )
+            );
             if (sourceCategory) {
               Object.keys(newCategoriesData).forEach(field => {
                 if (typeof newCategoriesData[field] === 'object' && newCategoriesData[field][sourceCategory]) {
@@ -4600,11 +4647,15 @@ if (isCustom) {
         return;
       }
 
-     let planToAdd = { 
-  ...currentPlan, 
+let planToAdd = {
+  ...currentPlan,
   planType: currentPlan.planType || planType,  // ← CRITICAL: Use currentPlan.planType first, fallback to state
-  tpa: companyInfo.tpa === 'Other' ? companyInfo.tpaManual : companyInfo.tpa
+  tpa: companyInfo.tpa === 'Other' ? companyInfo.tpaManual : companyInfo.tpa,
+  // Deep copy categoriesData to avoid reference issues between plans
+  categoriesData: JSON.parse(JSON.stringify(currentPlan.categoriesData || {})),
+  selectedCategories: [...(currentPlan.selectedCategories || [])]
 };
+
 
 // DEBUG: Log the planType being saved
 console.log('=== SAVING PLAN ===');
