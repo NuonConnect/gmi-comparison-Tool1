@@ -37,7 +37,7 @@ const PROVIDER_OPTIONS = [
   'NEW INDIA ASSURANCE CO LTD, ABU DHABI',
   'ORIENT INSURANCE PJSC',
   'ORIENT TAKAFUL PJSC',
-  'QATAR GENERAL INSURANCE & REINSURANCE CO.S.A.Q',
+'QATAR INSURANCE COMPANY',
   'QATAR INSURANCE COMPANY',
   'RAK INSURANCE',
   'SAUDI ARABIAN INSURANCE COMPANY B.S.C(c)',
@@ -51,7 +51,7 @@ const PROVIDER_OPTIONS = [
   'TOKIO MARINE NICHIDO FIRE INSURANCE CO. LTD.',
   'UNION INSURANCE COMPANY',
   'FIDELITY UNITED INSURANCE COMPANY PSC',
-  'WATANIA TAKAFUL GENERAL P.J.S.C',
+ 'WATANIA TAKAFUL FAMILY (PJSC)',
   'YAS TAKAFUL PJSC',
    'Takaful Emarat - ECare',
   'Qatar Insurance - Al Madallah', 
@@ -2101,7 +2101,7 @@ const formatCategoryData = (categoriesData) => {
 };
 
 function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber, highlightedPlanId = null, highlightedItems = {}, customFields = [], showFirstPage = true, hideOptions = {}) {
-  const { hideProviderNames = {}, hiddenFields = [], hideBrokerBranding = false } = hideOptions;
+ const { hideProviderNames = {}, hiddenFields = [], hideBrokerBranding = false, hideCompanyLogos = false } = hideOptions;
   const today = new Date().toLocaleDateString('en-GB');
   const hasComment = advisorComment && advisorComment.trim() !== '';
   // Helper to check if field should be shown
@@ -2266,8 +2266,8 @@ html, body {
 .company-info h2 { font-size: 14px; color: #1e40af; margin-bottom: 1mm; text-align: center; }
 .company-info h3 { font-size: 12px; color: #4338ca; margin-bottom: 1mm; text-align: center; }
 table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 2mm; table-layout: fixed; }
-th { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; padding: 2mm; text-align: left; border: 2px solid #4338ca; font-weight: bold; font-size: 9px; }
-td { background: #fff; padding: 2mm; border: 2px solid #6366f1; font-size: 9px; vertical-align: top; text-align: center; }
+th { background: linear-gradient(135deg, #a5b4fc 0%, #c4b5fd 100%); color: #1e1b4b; padding: 2mm; text-align: left; border: 2px solid #818cf8; font-weight: bold; font-size: 9px; }
+td { background: #fff; padding: 2mm; border: 2px solid #6366f1; font-size: 9px; vertical-align: middle; text-align: center; }
 tr:not(.section-header) td:first-child {
     font-weight: bold !important;
     background: #e0e7ff;
@@ -2281,7 +2281,8 @@ tr:not(.section-header) td:first-child {
     color: #374151; 
     background: #e0e7ff; 
     padding: 1.5mm 2mm 1.5mm 3mm; 
-    white-space: nowrap; 
+    word-wrap: break-word;
+    overflow-wrap: break-word;
     min-width: 55mm; 
     font-size: 9px;
     text-align: left;
@@ -2354,7 +2355,7 @@ ${!hideBrokerBranding ? `
         </div>
         ` : '<div style="height: 15mm;"></div>'}
         
-        <div class="section-title">GROUP MEDICAL INSURANCE - LIVE COMPARISON</div>
+        <div class="section-title">GROUP MEDICAL INSURANCE </div>
         
         <div class="company-info">
             <h2>COMPANY: ${companyInfo.companyName}</h2>
@@ -2367,7 +2368,7 @@ ${!hideBrokerBranding ? `
                     <th style="width: 200px; min-width: 200px;">BENEFITS</th>
 ${plans.map((plan, index) => {
                    const isHidden = hideProviderNames[plan.id];
-                   const logoUrl = isHidden ? null : getProviderLogo(plan.providerName);
+                   const logoUrl = (isHidden || hideCompanyLogos) ? null : getProviderLogo(plan.providerName);
                    const displayName = isHidden ? 'Option ' + String.fromCharCode(65 + index) : plan.providerName.substring(0, 30);
                    return `
     <th class="plan-header" style="vertical-align: middle;">
@@ -2489,7 +2490,7 @@ ${!hiddenFields.includes('roomType') && plans.some(plan => plan.categoriesData?.
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.consultantFees) ? `
                 <tr>
-                    <td class="benefit-name">Consultant's, Surgeon's and Anesthetist's Fees</td>
+                     <td class="benefit-name">Consultant's, Surgeon's and<br>Anesthetist's Fees</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'consultantFees')}</td>`).join('')}
                 </tr>
                 ` : ''}
@@ -2505,28 +2506,10 @@ ${!hiddenFields.includes('roomType') && plans.some(plan => plan.categoriesData?.
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'kidneyDialysis')}</td>`).join('')}
                 </tr>
                 ` : ''}
-                ${plans.some(plan => plan.categoriesData?.inpatientCopay) ? `
+           ${plans.some(plan => plan.categoriesData?.inpatientCopay) ? `
                 <tr>
                     <td class="benefit-name">Inpatient Copay</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inpatientCopay')}</td>`).join('')}
-                </tr>
-                ` : ''}
-                ${plans.some(plan => plan.categoriesData?.diagnosticTests) ? `
-                <tr>
-                    <td class="benefit-name">Diagnostic Tests & Procedures</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'diagnosticTests')}</td>`).join('')}
-                </tr>
-                ` : ''}
-                ${plans.some(plan => plan.categoriesData?.drugsMedicines) ? `
-                <tr>
-                    <td class="benefit-name">Drugs and Medicines</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'drugsMedicines')}</td>`).join('')}
-                </tr>
-                ` : ''}
-                ${plans.some(plan => plan.categoriesData?.consultantFees) ? `
-                <tr>
-                    <td class="benefit-name">Consultant's, Surgeon's and Anesthetist's Fees</td>
-                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'consultantFees')}</td>`).join('')}
                 </tr>
                 ` : ''}
                 ${plans.some(plan => plan.categoriesData?.inpatientOutNetwork) ? `
@@ -2629,7 +2612,7 @@ ${!hiddenFields.includes('maternity') && plans.some(p => p.categoriesData?.outPa
                 ` : ''}
  ${!hiddenFields.includes('repatriation') && plans.some(plan => plan.categoriesData?.repatriation) ? `
 <tr>
-    <td class="benefit-name">Repatriation</td>
+    <td class="benefit-name">Repatriation of Mortal Remains</td>  
     ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'repatriation') + '</td>').join('')}
 </tr>
 ` : ''}
@@ -2678,7 +2661,7 @@ ${plans.some(plan => plan.categoriesData?.outPatientMaternity) ? generateMergedR
 ${plans.some(plan => plan.categoriesData?.mentalHealth) ? generateMergedRow('Mental Health / Psychiatric Services', 'mentalHealth', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.routineDental) ? generateMergedRow('Dental Benefits', 'routineDental', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.routineOptical) ? generateMergedRow('Optical Benefits', 'routineOptical', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Repatriation', 'repatriation', plans, highlightedPlanId) : ''}
+${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Repatriation of Mortal Remains', 'repatriation', plans, highlightedPlanId) : ''}
 ` : ''}
                 <!-- BASIC PLAN FIELDS - Show only if Basic plans exist -->
                 ${hasBasicPlan ? `
@@ -3033,11 +3016,11 @@ ${(() => {
                     ${plans.map(plan => `<td style="text-align: center; font-weight: bold; background-color: #c7d2fe;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.totalPremium || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">PSP Fund (37/member)</td>
+                    <td class="benefit-name">PSP Fund (AED 37/Member)</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.pspFund || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
-                    <td class="benefit-name">ICP Charges (24/member)</td>
+                    <td class="benefit-name">ICP Charges (AED 24/Member)</td>
                     ${plans.map(plan => `<td style="text-align: center;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">AED ${(plan.icpCharges || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>`).join('')}
                 </tr>
                 <tr>
@@ -4191,6 +4174,7 @@ const [tobRecords, setTobRecords] = useState([]);
 const [hiddenFields, setHiddenFields] = useState([]);
 const [hideBrokerBranding, setHideBrokerBranding] = useState(false);
 const [hideFirstPage, setHideFirstPage] = useState(false);
+const [hideCompanyLogos, setHideCompanyLogos] = useState(false);
 
   // Function to delete a field from the current plan (used by BenefitSectionTable)
   const deleteField = (fieldKey) => {
@@ -4913,7 +4897,7 @@ const editPlan = (plan) => {
     highlightedItems, 
     customFields,
     !hideFirstPage,
-    { hideProviderNames, hiddenFields, hideBrokerBranding }
+   { hideProviderNames, hiddenFields, hideBrokerBranding, hideCompanyLogos }
   );
       const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
       downloadHTMLFile(htmlContent, fileName);
@@ -5283,7 +5267,7 @@ const companyInfoBenefits = [
     { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
     { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
-    { field: 'medicineType', label: 'Medicine Type', options: ['Formulary', 'Branded'], showMainValue: true, hasTextArea: false, canHighlight: true },
+ { field: 'medicineType', label: 'Medicine Type', options: ['Formulary', 'Branded', 'Other'], showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'prescribedPhysiotherapy', label: 'Prescribed Physiotherapy', options: PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true }
   ];
 
@@ -5761,10 +5745,16 @@ return (
       />
       <span className="text-sm text-gray-700">Hide Cover Page (Reduces Size)</span>
     </label>
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input
+        type="checkbox"
+        checked={hideCompanyLogos}
+        onChange={(e) => setHideCompanyLogos(e.target.checked)}
+        className="w-4 h-4 text-amber-600"
+      />
+      <span className="text-sm text-gray-700">Hide Insurance Company Logos</span>
+    </label>
   </div>
-  
- 
-
 </div>
       <div className="mb-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200"> 
   <h3 className="font-bold text-indigo-800 mb-3 text-sm">📑 PLAN TYPE SELECTION</h3>
