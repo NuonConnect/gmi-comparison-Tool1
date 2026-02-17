@@ -2096,7 +2096,25 @@ const formatCategoryData = (categoriesData) => {
   if (allSame) {
     return firstValue;
   } else {
-    return cleanedCategories.map(cat => `${cat}: ${cleanedData[cat]}`).join('\n');
+    // Group categories with the same value together
+    const valueGroups = {};
+    cleanedCategories.forEach(cat => {
+      const val = cleanedData[cat];
+      if (!valueGroups[val]) {
+        valueGroups[val] = [];
+      }
+      valueGroups[val].push(cat);
+    });
+
+    // Format merged groups
+    return Object.entries(valueGroups).map(([value, cats]) => {
+      if (cats.length === cleanedCategories.length) {
+        // All categories have same value (shouldn't reach here, but safety)
+        return value;
+      }
+      const catLabel = cats.join(' & ');
+      return `${catLabel}: ${value}`;
+    }).join('\n');
   }
 };
 
