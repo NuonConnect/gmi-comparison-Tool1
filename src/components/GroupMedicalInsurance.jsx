@@ -254,7 +254,8 @@ const BASIC_TPA_NETWORK_MAPPING = {
 
 const ROOM_TYPE_OPTIONS = ['PRIVATE', 'SEMI PRIVATE', 'SHARED ROOM', 'WARD', 'Suit room', 'Other'];
 const COVERAGE_OPTIONS = [
-  'Covered', 
+  'Covered',
+  'Covered with NIL Co-Pay', 
   'Covered with 10% copay', 
   'Covered with 15% copay', 
   'Covered with 20% copay', 
@@ -2090,8 +2091,8 @@ const formatCategoryData = (categoriesData) => {
   const cleanedCategories = Object.keys(cleanedData);
   if (cleanedCategories.length === 0) return 'Not specified';
 
-  const firstValue = cleanedData[cleanedCategories[0]];
-  const allSame = cleanedCategories.every(cat => cleanedData[cat] === firstValue);
+ const firstValue = cleanedData[cleanedCategories[0]]?.trim();
+  const allSame = cleanedCategories.every(cat => cleanedData[cat]?.trim() === firstValue);
   
   if (allSame) {
     return firstValue;
@@ -2438,12 +2439,16 @@ ${!hiddenFields.includes('network') && !hasDHAManualPlan ? `
                       return '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + displayText + '</td>';
                     }).join('')}
                 </tr>` : ''}
- ${!hiddenFields.includes('preExistingCondition') && hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? `
+
+                ${plans.some(plan => plan.categoriesData?.aggregateLimit) ? `
 <tr>
-    <td class="benefit-name">Pre Existing Condition</td>
-    ${plans.map(plan => '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + getFieldValue(plan, 'preExistingCondition') + '</td>').join('')}
-</tr>
-` : ''}
+    <td class="benefit-name">Annual Limit</td>
+    ${plans.map(plan => {
+      const data = plan.categoriesData?.aggregateLimit || {};
+      const displayText = formatCategoryData(data);
+      return '<td style="text-align: center; white-space: pre-line;" class="' + (plan.id === highlightedPlanId ? 'benefit-cell highlighted' : '') + '">' + displayText + '</td>';
+    }).join('')}
+</tr>` : ''}
 ${!hiddenFields.includes('preExistingCondition') && hasSMEPlan && plans.some(plan => plan.categoriesData?.preExistingCondition) ? `
 <tr>
     <td class="benefit-name">Pre Existing Condition</td>
@@ -2648,7 +2653,6 @@ ${hasDHAManualPlan ? `
     <td colspan="${plans.length + 1}">COMPANY COVERAGE DETAILS</td>
 </tr>
 ${plans.some(plan => plan.categoriesData?.planName) ? generateMergedRow('Product Name', 'planName', plans, highlightedPlanId) : ''}
-${plans.some(plan => plan.categoriesData?.aggregateLimit) ? generateMergedRow('Annual Limit', 'aggregateLimit', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.areaOfCover) ? generateMergedRow('Area of Cover', 'areaOfCover', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.network) ? generateMergedRow('Network', 'network', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.accessForOP) ? generateMergedRow('Access for OP', 'accessForOP', plans, highlightedPlanId) : ''}
@@ -5284,7 +5288,7 @@ const companyInfoBenefits = [
     { field: 'outpatientConsultation', label: 'Outpatient Consultation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
     { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
     { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+{ field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
  { field: 'medicineType', label: 'Medicine Type', options: ['Formulary', 'Branded', 'Other'], showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'prescribedPhysiotherapy', label: 'Prescribed Physiotherapy', options: PRESCRIBED_PHYSIOTHERAPY_NETWORK_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true }
   ];
@@ -5421,7 +5425,7 @@ const getDHAManualBenefits = () => {
   ];
 
   const DHA_PHARMACY_COPAY_OPTIONS = [
-    'Covered with NIL Co-Pay',
+    'Covered with NIL Copay',
     'Covered with 10% copay',
     'Covered with 20% copay',
     'Covered with 30% copay',

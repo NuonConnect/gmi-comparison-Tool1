@@ -48,7 +48,7 @@ const UserHeader = ({ onOpenAdmin }) => {
               <h1 className="text-xl font-bold text-white">GMI Comparison Tool</h1>
               <p className="text-indigo-200 text-xs">New Shield Insurance Brokers</p>
             </div>
-            <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">TEST</span>
+          
           </div>
 
           {/* User Menu */}
