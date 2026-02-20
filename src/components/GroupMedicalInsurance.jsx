@@ -315,7 +315,11 @@ const BASIC_150K_DEFAULTS = {
   outpatientCopay: { 'LSB': 'Covered with 20% copay', 'HSB': 'Covered with 20% copay' },
   pharmacyLimit: { 'LSB': 'Covered upto AED 2,500', 'HSB': 'Covered upto AED 2,500' },
   pharmacyCopay: { 'LSB': 'Covered with 30% copay', 'HSB': 'Covered with 30% copay' },
-  prescribedPhysiotherapy: { 'LSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay', 'HSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay' }
+  prescribedPhysiotherapy: { 'LSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay', 'HSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay' },
+  inPatientMaternity: { 'LSB': 'Covered upto AED 10,000 with 10% copay', 'HSB': 'Covered upto AED 10,000 with 10% copay' },
+  outPatientMaternity: { 'LSB': 'Covered with 10% copay', 'HSB': 'Covered with 10% copay' },
+  routineDental: { 'LSB': 'Covered up to limit of AED 500 with 30% copay', 'HSB': 'Covered up to limit of AED 500 with 30% copay' },
+  mentalHealth: { 'LSB': 'Covered up to limit of AED 800 with 30% copay', 'HSB': 'Covered up to limit of AED 800 with 30% copay' }
 };
 
 // DHA ENHANCED TEMPLATES - Provider-TPA Mapping
@@ -2678,6 +2682,9 @@ ${plans.some(plan => plan.categoriesData?.pharmacyCoinsurance) ? generateMergedR
 ${plans.some(plan => plan.categoriesData?.pharmacyCopay) ? generateMergedRow('Pharmacy Co-Pay', 'pharmacyCopay', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.medicineType) ? generateMergedRow('Medicine Type', 'medicineType', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? generateMergedRow('Physiotherapy Sessions', 'prescribedPhysiotherapy', plans, highlightedPlanId) : ''}
+<tr class="section-header">
+    <td colspan="${plans.length + 1}">OTHER BENEFITS</td>
+</tr>
 ${plans.some(plan => plan.categoriesData?.inPatientMaternity) ? generateMergedRow('In-Patient Maternity', 'inPatientMaternity', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.outPatientMaternity) ? generateMergedRow('Out-Patient Maternity', 'outPatientMaternity', plans, highlightedPlanId) : ''}
 ${plans.some(plan => plan.categoriesData?.mentalHealth) ? generateMergedRow('Mental Health / Psychiatric Services', 'mentalHealth', plans, highlightedPlanId) : ''}
@@ -2720,13 +2727,37 @@ ${plans.some(plan => plan.categoriesData?.repatriation) ? generateMergedRow('Rep
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'pharmacyCopay')}</td>`).join('')}
                 </tr>
                 ` : ''}
-                ${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? `
+        ${plans.some(plan => plan.categoriesData?.prescribedPhysiotherapy) ? `
                 <tr>
                     <td class="benefit-name">Physiotherapy</td>
                     ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'prescribedPhysiotherapy')}</td>`).join('')}
                 </tr>
                 ` : ''}
+                ${plans.some(plan => plan.categoriesData?.inPatientMaternity) ? `
+                <tr>
+                    <td class="benefit-name">In-Patient Maternity</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'inPatientMaternity')}</td>`).join('')}
+                </tr>
                 ` : ''}
+                ${plans.some(plan => plan.categoriesData?.outPatientMaternity) ? `
+                <tr>
+                    <td class="benefit-name">Out-Patient Maternity</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'outPatientMaternity')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.routineDental) ? `
+                <tr>
+                    <td class="benefit-name">Dental Benefits</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'routineDental')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ${plans.some(plan => plan.categoriesData?.mentalHealth) ? `
+                <tr>
+                    <td class="benefit-name">Mental Health</td>
+                    ${plans.map(plan => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${getFieldValue(plan, 'mentalHealth')}</td>`).join('')}
+                </tr>
+                ` : ''}
+                ` : ''} 
 
                 <!-- CUSTOM FIELDS -->
                 ${customFields.map(field => `
@@ -4226,7 +4257,7 @@ useEffect(() => {
     }
   }, [companyInfo.tpa, planType]);
 
-  const handleAnnualLimitChange = (limit) => {
+const handleAnnualLimitChange = (limit) => {
     if (limit === 'AED 150,000') {
       setCurrentPlan(prev => ({
         ...prev,
@@ -4240,7 +4271,11 @@ useEffect(() => {
           outpatientCopay: { 'LSB': 'Covered with 20% copay', 'HSB': 'Covered with 20% copay' },
           pharmacyLimit: { 'LSB': 'Covered upto AED 2,500', 'HSB': 'Covered upto AED 2,500' },
           pharmacyCopay: { 'LSB': 'Covered with 30% copay', 'HSB': 'Covered with 30% copay' },
-          prescribedPhysiotherapy: { 'LSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay', 'HSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay' }
+          prescribedPhysiotherapy: { 'LSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay', 'HSB': 'Physiotherapy treatment services-Covered upto 6 sessions with 20% copay' },
+          inPatientMaternity: { 'LSB': 'Covered upto AED 10,000 with 10% copay', 'HSB': 'Covered upto AED 10,000 with 10% copay' },
+          outPatientMaternity: { 'LSB': 'Covered with 10% copay', 'HSB': 'Covered with 10% copay' },
+          routineDental: { 'LSB': 'Covered up to limit of AED 500 with 30% copay', 'HSB': 'Covered up to limit of AED 500 with 30% copay' },
+          mentalHealth: { 'LSB': 'Covered up to limit of AED 800 with 30% copay', 'HSB': 'Covered up to limit of AED 800 with 30% copay' }
         }
       }));
     } else {
@@ -5308,14 +5343,18 @@ const companyInfoBenefits = [
     return { companyInfoBenefits, inpatientBenefits, outpatientBenefits, otherBenefits };
   };
 
-  const getBasicBenefits = () => {
+const getBasicBenefits = () => {
     const basicBenefits = [
       { field: 'inpatientCopay', label: 'Inpatient Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'outpatientConsultation', label: 'Outpatient Consultation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'outpatientCopay', label: 'Outpatient Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-      { field: 'prescribedPhysiotherapy', label: 'Physiotherapy', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
+      { field: 'prescribedPhysiotherapy', label: 'Physiotherapy', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+      { field: 'inPatientMaternity', label: 'In-Patient Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+      { field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+      { field: 'routineDental', label: 'Dental Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
+      { field: 'mentalHealth', label: 'Mental Health', options: [], showMainValue: false, hasTextArea: true, canHighlight: true }
     ];
 
     return { basicBenefits };
