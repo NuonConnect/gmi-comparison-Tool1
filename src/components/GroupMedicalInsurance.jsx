@@ -64,9 +64,9 @@ const PROVIDER_OPTIONS = [
   'National General Insurance',
   'Liva Insurance BSC',
   'ASNIC - Al Madallah',
-  'DNI - Al Madallah'
-];
-
+ 'DNI - Al Madallah',
+    'Other'
+];  
 // Custom Companies Storage Key (fallback for localStorage)
 const CUSTOM_COMPANIES_STORAGE_KEY = 'gmi_custom_companies';
 const COMPARISONS_STORAGE_KEY = 'insuranceHistory';
@@ -215,7 +215,7 @@ const AREA_OF_COVER_OPTIONS = ['UAE', 'GCC', 'ISC', 'Arab countries', 'South Eas
   'UAE, GCC and SEA at Actuals',
   'WW excl. US & Canada at Actuals'];
 const AGGREGATE_LIMIT_OPTIONS = ['AED 150,000', 'AED 200,000', 'AED 250,000', 'AED 300,000', 'AED 500,000', 'AED 1,000,000', 'AED 2,000,000','AED 3,000,000'];
-const TPA_OPTIONS = ['Invoice', 'NAS', 'NEXTCARE', 'MEDNET', 'NEURON', 'ECARE', 'AL MADALLAH', 'DUBAICARE', 'FMC', 'INAYAH', 'HEALTHNET', 'AAFIYA', 'Other'];
+const TPA_OPTIONS = ['InHouse', 'NAS', 'NEXTCARE', 'MEDNET', 'NEURON', 'ECARE', 'AL MADALLAH', 'DUBAICARE', 'FMC', 'INAYAH', 'HEALTHNET', 'AAFIYA', 'Other'];
 
 // BASIC Plan Constants
 const BASIC_TPA_OPTIONS = ['NEXTCARE', 'INHOUSE', 'ECARE', 'ALMADALLAH', 'HEALTHNET'];
@@ -2133,12 +2133,14 @@ function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber
   // Company Logo Mapping
   const COMPANY_LOGOS = {
     'SUKOON': 'https://i.imgur.com/hCWlUMe.jpeg',
+    'SUKOON TAKAFUL': 'https://i.ibb.co/ksgrjZKC/Sukoon-takaful.png',
     'DNI': 'https://i.imgur.com/HKXpfsU.jpeg',
     'DNIRC': 'https://i.imgur.com/HKXpfsU.jpeg',
     'DUBAI NATIONAL': 'https://i.imgur.com/HKXpfsU.jpeg',
     'QATAR': 'https://i.imgur.com/5d63cLP.png',
     'QATAR INSURANCE': 'https://i.imgur.com/5d63cLP.png',
     'QIC': 'https://i.imgur.com/5d63cLP.png',
+    'WATANIA TAKAFUL': 'https://i.ibb.co/PGzjTYWf/Watania.jpg',
     'WATANIA': 'https://i.imgur.com/KaVFAu6.jpeg',
     'ADAMJEE': 'https://i.imgur.com/dufDDqK.jpeg',
     'FIDELITY': 'https://i.imgur.com/T26OgNE.jpeg',
@@ -2162,32 +2164,58 @@ function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber
     'GULF INSURANCE': 'https://i.imgur.com/Kho3VbT.png',
     'AL WATHBA': 'https://i.imgur.com/eulYgMf.jpeg',
     'WATHBA': 'https://i.imgur.com/eulYgMf.jpeg',
-    'ORIENT': 'https://i.imgur.com/eIN9e72.png',
+    'ORIENT TAKAFUL': 'https://i.ibb.co/ksJJxd0w/orient-takafu.jpg',
     'ORIENT INSURANCE': 'https://i.imgur.com/eIN9e72.png',
+    'ORIENT': 'https://i.imgur.com/eIN9e72.png',
     'UNION INSURANCE': 'https://i.imgur.com/sdmPCNl.jpeg',
     'AL SAGR': 'https://i.ibb.co/RkWHHjVP/al-sagr-insurance-logo-final-correction-as-of-10-05-2018.jpg',
     'ALSAGR': 'https://i.ibb.co/RkWHHjVP/al-sagr-insurance-logo-final-correction-as-of-10-05-2018.jpg',
-    'AL ITTIHAD AL WATANI': 'https://i.imgur.com/UpraA62.jpeg',
-    'ITTIHAD': 'https://i.imgur.com/UpraA62.jpeg',
-    'WATANIA TAKAFUL': 'https://i.ibb.co/PGzjTYWf/Watania.jpg',
+'AL ITTIHAD AL WATANI': 'https://i.ibb.co/C3MJb656/images.png',
+    'ITTIHAD': 'https://i.ibb.co/C3MJb656/images.png',  
     'AL BUHAIRA': 'https://i.ibb.co/1YJWgTHY/al-buhaira.jpg',
     'ALBUHAIRA': 'https://i.ibb.co/1YJWgTHY/al-buhaira.jpg',
     'BUHAIRA': 'https://i.ibb.co/1YJWgTHY/al-buhaira.jpg',
     'ADNIC': 'https://i.ibb.co/PZhskxpb/ADNIC.jpg',
-    'ABU DHABI NATIONAL': 'https://i.ibb.co/PZhskxpb/ADNIC.jpg',
+    'ABU DHABI NATIONAL INSURANCE': 'https://i.ibb.co/PZhskxpb/ADNIC.jpg',
     'ADNTC': 'https://i.ibb.co/Hpk1Qh07/ADNTC.jpg',
     'ABU DHABI NATIONAL TAKAFUL': 'https://i.ibb.co/Hpk1Qh07/ADNTC.jpg',
-    'ORIENT TAKAFUL': 'https://i.ibb.co/chFfxJ0K/orient-takafu.jpg',
     'TAKAFUL EMARAT': 'https://i.ibb.co/2LjDzfG/Takaful-Emarat.png',
     'DUBAI INSURANCE': 'https://i.ibb.co/7NTvNS0K/DIC.jpg',
     'DIC': 'https://i.ibb.co/7NTvNS0K/DIC.jpg',
-    'MEDGULF': 'https://i.ibb.co/YBDxKJWS/medgulf.png',
+    'MEDGULF INSURANCE': 'https://i.ibb.co/qL388XLZ/medgulf.png',
+    'MEDGULF': 'https://i.ibb.co/qL388XLZ/medgulf.png',
+    'AL AIN AHLIA': 'https://i.ibb.co/JF0xtpDP/alaininsurance.png',
+    'AL AIN': 'https://i.ibb.co/JF0xtpDP/alaininsurance.png',
+    'AL FUJAIRAH': 'https://i.ibb.co/Ngmcs864/afnic.jpg',
+    'AFNIC': 'https://i.ibb.co/Ngmcs864/afnic.jpg',
+    'ALLIANCE INSURANCE': 'https://i.ibb.co/xSxhb26x/Alliance-Insu.jpg',
+    'ALLIANCE': 'https://i.ibb.co/xSxhb26x/Alliance-Insu.jpg',
+    'AMERICAN HOME': 'https://i.ibb.co/tw5vNM7L/AIG.png',
+    'AIG': 'https://i.ibb.co/tw5vNM7L/AIG.png',
+    'ARABIA INSURANCE': 'https://i.ibb.co/JjLwhc5R/arabia.png',
+    'ARABIA': 'https://i.ibb.co/JjLwhc5R/arabia.png',
+    'CIGNA INSURANCE': 'https://i.ibb.co/Sw9vJfs9/CIGNA.jpg',
+    'CIGNA': 'https://i.ibb.co/Sw9vJfs9/CIGNA.jpg',
+'METLIFE ALICO': 'https://i.ibb.co/PsyxFGqw/Met-Life.png',
+    'METLIFE': 'https://i.ibb.co/PsyxFGqw/Met-Life.png',
+    'SAUDI ARABIAN INSURANCE': 'https://i.ibb.co/Kc1Vwd6J/DAMANA.jpg',
+    'SAUDI ARABIAN': 'https://i.ibb.co/Kc1Vwd6J/DAMANA.jpg',
+    'DAMANA': 'https://i.ibb.co/Kc1Vwd6J/DAMANA.jpg',
+    'SHARJAH INSURANCE': 'https://i.ibb.co/k212q5MC/Sharjah.jpg',
+    'SHARJAH': 'https://i.ibb.co/k212q5MC/Sharjah.jpg',
+    'AXA INSURANCE': 'https://i.ibb.co/wrcx2VTL/AXA-Logo-svg.png',
+    'AXA': 'https://i.ibb.co/wrcx2VTL/AXA-Logo-svg.png',
+    'NATIONAL HEALTH INSURANCE': 'https://i.ibb.co/4gwfXtH3/daman-insurance-company-logo.png',
+    'DAMAN': 'https://i.ibb.co/4gwfXtH3/daman-insurance-company-logo.png',
   };
-
-  const getProviderLogo = (providerName) => {
+const getProviderLogo = (providerName) => {
     if (!providerName) return null;
     const upperName = providerName.toUpperCase();
-    for (const [key, url] of Object.entries(COMPANY_LOGOS)) {
+    const sortedEntries = Object.entries(COMPANY_LOGOS).sort((a, b) => b[0].length - a[0].length);
+    for (const [key, url] of sortedEntries) {
+      if (upperName.startsWith(key)) return url;
+    }
+    for (const [key, url] of sortedEntries) {
       if (upperName.includes(key)) return url;
     }
     return null;
@@ -2392,12 +2420,12 @@ ${!hideBrokerBranding ? `
 ${plans.map((plan, index) => {
                    const isHidden = hideProviderNames[plan.id];
                    const logoUrl = (isHidden || hideCompanyLogos) ? null : getProviderLogo(plan.providerName);
-                   const displayName = isHidden ? 'Option ' + String.fromCharCode(65 + index) : plan.providerName.substring(0, 30);
+         const displayName = isHidden ? 'Option ' + String.fromCharCode(65 + index) : (plan.providerName === 'Other' ? (plan.customProviderName || 'Other') : plan.providerName);
                    return `
     <th class="plan-header" style="vertical-align: middle;">
         ${logoUrl ? `<div style="text-align: center; margin-bottom: 5px;">
           <img src="${logoUrl}" alt="${plan.providerName}"
-               style="max-height: 40px; max-width: 100px; object-fit: contain;">
+              style="max-height: 55px; max-width: 120px; object-fit: contain;">
         </div>` : ''}
         <div style="text-align: center; font-weight: bold;">
           ${displayName}${!isHidden && plan.planTag ? ' - ' + plan.planTag : ''}
@@ -3803,7 +3831,7 @@ const handleProviderChange = (provider) => {
             <div className="flex justify-between items-center mb-2">
   <label className="block text-sm font-bold text-gray-700">Select Provider</label>
 </div>
-            <select
+         <select
               value={selectedProvider}
               onChange={(e) => handleProviderChange(e.target.value)}
               className="w-full p-3 border-2 border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
@@ -3821,7 +3849,17 @@ const handleProviderChange = (provider) => {
                   ))}
                 </optgroup>
               )}
+              <option value="Other">Other</option>
             </select>
+            {selectedProvider === 'Other' && (
+              <textarea
+                placeholder="Enter custom provider name..."
+                value={currentPlan.customProviderName || ''}
+                onChange={(e) => setCurrentPlan({...currentPlan, customProviderName: e.target.value, providerName: e.target.value})}
+                className="w-full mt-2 p-3 border-2 border-indigo-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500"
+                style={{ minHeight: '60px' }}
+              />
+            )}
             {customCompanies.length > 0 && (
               <p className="text-xs text-purple-600 mt-1">
                 ⭐ = Custom companies you've added. These are saved permanently.
@@ -6161,7 +6199,7 @@ return (
     <div className="space-y-3">
       <div>
         <label className="block text-xs font-bold text-gray-700 mb-1">Provider Name *</label>
-        <select
+      <select
           value={currentPlan.providerName}
           onChange={(e) => handleInputChange('providerName', e.target.value)}
           className="w-full p-2 border-2 border-purple-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
@@ -6171,6 +6209,15 @@ return (
             <option key={provider} value={provider}>{provider}</option>
           ))}
         </select>
+        {currentPlan.providerName === 'Other' && (
+          <textarea
+            placeholder="Enter custom provider name..."
+            value={currentPlan.customProviderName || ''}
+            onChange={(e) => setCurrentPlan(prev => ({...prev, customProviderName: e.target.value}))}
+            className="w-full mt-2 p-2 border-2 border-purple-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
+            style={{ minHeight: '60px' }}
+          />
+        )}
       </div>
 
       <div>
@@ -6298,8 +6345,16 @@ return (
                       <option key={provider} value={provider}>{provider}</option>
                     ))}
                   </select>
+                  {currentPlan.providerName === 'Other' && (
+                    <textarea
+                      placeholder="Enter custom provider name..."
+                      value={currentPlan.customProviderName || ''}
+                      onChange={(e) => setCurrentPlan(prev => ({...prev, customProviderName: e.target.value}))}
+                      className="w-full mt-2 p-2 border-2 border-purple-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500"
+                      style={{ minHeight: '60px' }}
+                    />
+                  )}
                 </div>
-
         {(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
                 <>
                   <div>
