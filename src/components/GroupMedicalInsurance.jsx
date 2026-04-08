@@ -268,7 +268,8 @@ const OUTPATIENT_MATERNITY_OPTIONS = [
   'Covered with Nil copay',
   'Covered with 10% copay',
   'Covered with 20% copay',
-  'Not Covered'
+  'Not Covered',
+  'Other'
 ];
 
 const CONSULTATION_DEDUCTIBLE_OPTIONS = ['No Deductible', '20% co-pay', '20% co-pay up to max AED 20/-', '20% co-pay up to max AED 25/-', '20% co-pay up to max AED 50/-', '10% co-pay', '10% co-pay up to max AED 25/-', '10% co-pay up to max AED 50/-', 'Other'];
