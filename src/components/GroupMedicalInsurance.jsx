@@ -5368,7 +5368,7 @@ const companyInfoBenefits = [
 
     const otherBenefits = [
       { field: 'inPatientMaternity', label: 'In-Patient Maternity', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-{ field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: OUTPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+{ field: 'outPatientMaternity', label: 'Out-Patient Maternity', options: OUTPATIENT_MATERNITY_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
       { field: 'routineDental', label: 'Dental Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'routineOptical', label: 'Optical Benefits', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
       { field: 'preventiveServices', label: 'Preventive Services', options: PREVENTIVE_SERVICES_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
