@@ -5360,7 +5360,7 @@ const companyInfoBenefits = [
   const outpatientBenefits = [
   { field: 'referralType', label: 'Referral Type', options: ['Direct Specialist Access', 'With GP referral', 'Other'], showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'outpatientConsultation', label: 'Outpatient Consultation', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
-    { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: false, canHighlight: true },
+  { field: 'diagnosticLabs', label: 'Diagnostic Tests and Labs', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
     { field: 'pharmacyLimit', label: 'Pharmacy Limit', options: [], showMainValue: false, hasTextArea: true, canHighlight: true },
 { field: 'pharmacyCopay', label: 'Pharmacy Copay', options: COVERAGE_OPTIONS, showMainValue: true, hasTextArea: true, canHighlight: true },
  { field: 'medicineType', label: 'Medicine Type', options: ['Formulary', 'Branded', 'Other'], showMainValue: true, hasTextArea: true, canHighlight: true },
