@@ -5296,16 +5296,14 @@ const loadHistory = async () => {
 
   // Delete comparison from cloud
 const deleteComparison = async (id) => {
+    if (!confirm('Are you sure you want to delete this comparison?')) return;
     try {
       await deleteComparisonFromDb(id);
       loadHistory();
+      alert('✅ Comparison deleted!');
     } catch (error) {
       console.error('Error deleting:', error);
-    }
-    try {
-      await logActivity(user, 'delete_comparison', { comparisonId: id });
-    } catch (e) {
-      console.error('Error logging activity:', e);
+      alert('⚠️ Error deleting comparison');
     }
   };
 
