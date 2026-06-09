@@ -5013,20 +5013,24 @@ const comparison = {
         date: new Date().toISOString(),
       };  
       
-    try {
+  try {
       if (isEditingComparison && currentComparisonId) {
         await updateComparison(currentComparisonId, comparison, user);
-        await logActivity(user, 'edit_comparison', { companyName: companyInfo.companyName, referenceNumber });
         alert('✅ Comparison updated successfully!');
       } else {
         await saveComparison(comparison, user);
-        await logActivity(user, 'create_comparison', { companyName: companyInfo.companyName, referenceNumber });
         alert('✅ Comparison saved successfully!');
       }
       loadHistory();
     } catch (error) {
       console.error('Error saving:', error);
       alert('⚠️ Error saving comparison');
+    }
+    try {
+      const action = isEditingComparison ? 'edit_comparison' : 'create_comparison';
+      await logActivity(user, action, { companyName: companyInfo.companyName, referenceNumber });
+    } catch (e) {
+      console.error('Error logging activity:', e);
     }
     
     // Reset editing state
@@ -5294,10 +5298,14 @@ const loadHistory = async () => {
 const deleteComparison = async (id) => {
     try {
       await deleteComparisonFromDb(id);
-      await logActivity(user, 'delete_comparison', { comparisonId: id });
       loadHistory();
     } catch (error) {
       console.error('Error deleting:', error);
+    }
+    try {
+      await logActivity(user, 'delete_comparison', { comparisonId: id });
+    } catch (e) {
+      console.error('Error logging activity:', e);
     }
   };
 
