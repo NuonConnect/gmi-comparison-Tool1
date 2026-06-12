@@ -4998,6 +4998,10 @@ const editPlan = (plan) => {
       const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
       downloadHTMLFile(htmlContent, fileName);
       
+console.log('=== SAVING COMPARISON ===');
+console.log('Number of plans being saved:', plans.length);
+plans.forEach((p, i) => console.log(`Plan ${i+1}:`, p.providerName, p.planType));
+console.log('=========================');
 const comparison = {
         companyName: companyInfo.companyName,
         referenceNumber,
