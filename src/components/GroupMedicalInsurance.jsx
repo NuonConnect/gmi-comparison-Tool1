@@ -4998,7 +4998,6 @@ const editPlan = (plan) => {
       const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
       downloadHTMLFile(htmlContent, fileName);
       
-alert('Plans being saved: ' + plans.length + ' - ' + plans.map(p => p.providerName).join(', '));
 const comparison = {
         companyName: companyInfo.companyName,
         referenceNumber,
