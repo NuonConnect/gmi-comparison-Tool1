@@ -1,17 +1,11 @@
 // Database utilities using Netlify Blobs API
 // This replaces supabaseDb.js
 
-// Save a new comparison
+// Save a new comparison.
+// Uses a server-side upsert (no client-side read-modify-write) so concurrent
+// saves from different users can no longer overwrite each other.
 export const saveComparison = async (comparisonData, user) => {
   try {
-    // Get existing comparisons
-    const response = await fetch('/api/comparisons');
-    let comparisons = [];
-    if (response.ok) {
-      comparisons = await response.json();
-    }
-
-// Create new comparison with user_id
     const newComparison = {
       id: Date.now().toString(),
       ...comparisonData,
@@ -21,20 +15,16 @@ export const saveComparison = async (comparisonData, user) => {
       updated_at: new Date().toISOString()
     };
 
-    // Add to list
-    comparisons.push(newComparison);
-
-    // Save back
     const saveResponse = await fetch('/api/comparisons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(comparisons)
+      body: JSON.stringify({ action: 'upsert', comparison: newComparison })
     });
 
     if (saveResponse.ok) {
       return { success: true, data: newComparison };
     } else {
-      return { success: false, error: 'Failed to save' };
+      return { success: false, error: 'Failed to save (HTTP ' + saveResponse.status + ')' };
     }
   } catch (error) {
     console.error('Save comparison error:', error);
@@ -42,40 +32,32 @@ export const saveComparison = async (comparisonData, user) => {
   }
 };
 
-// Update an existing comparison
+// Update an existing comparison.
+// Server-side upsert merges the changed fields into the stored record, so only
+// this comparison is touched (no whole-array overwrite, no lost updates).
 export const updateComparison = async (id, comparisonData, user) => {
   try {
-    const response = await fetch('/api/comparisons');
-    let comparisons = [];
-    if (response.ok) {
-      comparisons = await response.json();
-    }
-
-    // Find and update
-    const index = comparisons.findIndex(c => c.id === id);
-    if (index === -1) {
-      return { success: false, error: 'Comparison not found' };
-    }
-
-comparisons[index] = {
-      ...comparisons[index],
+    const incoming = {
+      id,
       ...comparisonData,
-      user_id: user?.id || comparisons[index].user_id,
-      user_email: user?.email || comparisons[index].user_email,
       updated_at: new Date().toISOString()
     };
+    // Only override identity fields when we actually have them; otherwise the
+    // server merge keeps the existing values.
+    if (user?.id) incoming.user_id = user.id;
+    if (user?.email) incoming.user_email = user.email;
 
-    // Save back
     const saveResponse = await fetch('/api/comparisons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(comparisons)
+      body: JSON.stringify({ action: 'upsert', comparison: incoming })
     });
 
     if (saveResponse.ok) {
-      return { success: true, data: comparisons[index] };
+      const result = await saveResponse.json().catch(() => ({}));
+      return { success: true, data: result.data || incoming };
     } else {
-      return { success: false, error: 'Failed to update' };
+      return { success: false, error: 'Failed to update (HTTP ' + saveResponse.status + ')' };
     }
   } catch (error) {
     console.error('Update comparison error:', error);
@@ -116,29 +98,19 @@ export const getAllComparisons = async () => {
   }
 };
 
-// Delete a comparison
+// Delete a comparison (server-side filter, no whole-array overwrite).
 export const deleteComparison = async (id) => {
   try {
-    const response = await fetch('/api/comparisons');
-    let comparisons = [];
-    if (response.ok) {
-      comparisons = await response.json();
-    }
-
-    // Filter out the deleted comparison
-    const filtered = comparisons.filter(c => c.id !== id);
-
-    // Save back
     const saveResponse = await fetch('/api/comparisons', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(filtered)
+      body: JSON.stringify({ action: 'delete', id })
     });
 
     if (saveResponse.ok) {
       return { success: true };
     } else {
-      return { success: false, error: 'Failed to delete' };
+      return { success: false, error: 'Failed to delete (HTTP ' + saveResponse.status + ')' };
     }
   } catch (error) {
     console.error('Delete comparison error:', error);

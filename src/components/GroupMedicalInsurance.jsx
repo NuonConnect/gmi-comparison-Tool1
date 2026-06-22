@@ -71,6 +71,12 @@ const PROVIDER_OPTIONS = [
 const CUSTOM_COMPANIES_STORAGE_KEY = 'gmi_custom_companies';
 const COMPARISONS_STORAGE_KEY = 'insuranceHistory';
 
+// Generate a unique id. Date.now() alone collides when plans are added within
+// the same millisecond (TOB batches, quick duplicates), which caused plans to
+// overwrite each other. The counter guarantees uniqueness within a session.
+let __idCounter = 0;
+const generateUniqueId = () => `${Date.now()}-${(__idCounter = (__idCounter + 1) % 1000000)}`;
+
 // API endpoints for cloud storage
 const API_BASE = '/api';
 
@@ -4789,12 +4795,12 @@ console.log('==================');
       }
 
       const planWithTotals = calculatePlanTotals(planToAdd);
-      const newPlanId = currentPlan.id || Date.now();
+      const newPlanId = currentPlan.id || generateUniqueId();
 
       if (currentPlan.id) {
-        setPlans(plans.map(p => p.id === currentPlan.id ? planWithTotals : p));
+        setPlans(prev => prev.map(p => p.id === currentPlan.id ? planWithTotals : p));
       } else {
-        setPlans([...plans, { ...planWithTotals, id: newPlanId }]);
+        setPlans(prev => [...prev, { ...planWithTotals, id: newPlanId }]);
         
         if (highlightedItems['draft']) {
           setHighlightedItems(prev => ({
@@ -4896,7 +4902,7 @@ const editPlan = (plan) => {
   };
 
   const deletePlan = (id) => {
-    setPlans(plans.filter(p => p.id !== id));
+    setPlans(prev => prev.filter(p => p.id !== id));
     if (highlightedPlanId === id) {
       setHighlightedPlanId(null);
     }
@@ -4906,7 +4912,7 @@ const editPlan = (plan) => {
     // Create a copy with a new ID
     const duplicatedPlan = {
       ...plan,
-      id: Date.now(),
+      id: generateUniqueId(),
       providerName: plan.providerName + ' (Copy)',
       // Deep copy categoriesData to avoid reference issues
       categoriesData: JSON.parse(JSON.stringify(plan.categoriesData)),
@@ -4917,7 +4923,7 @@ const editPlan = (plan) => {
     const planWithTotals = calculatePlanTotals(duplicatedPlan);
     
     // Add to plans list
-    setPlans([...plans, planWithTotals]);
+    setPlans(prev => [...prev, planWithTotals]);
     
     // Copy highlighted items if they exist
     if (highlightedItems[plan.id]) {
@@ -4948,7 +4954,7 @@ const editPlan = (plan) => {
     const useTOBRecord = (record) => {
       const newPlan = {
         ...record,
-        id: Date.now(),
+        id: generateUniqueId(),
         reusedFrom: record.id,
       };
       setPlans(prev => [...prev, newPlan]);
@@ -5014,17 +5020,22 @@ const comparison = {
       };  
       
   try {
+      let result;
       if (isEditingComparison && currentComparisonId) {
-        await updateComparison(currentComparisonId, comparison, user);
-        alert('✅ Comparison updated successfully!');
+        result = await updateComparison(currentComparisonId, comparison, user);
       } else {
-        await saveComparison(comparison, user);
-        alert('✅ Comparison saved successfully!');
+        result = await saveComparison(comparison, user);
       }
+      // saveComparison/updateComparison return { success:false } WITHOUT throwing
+      // on failure, so check the result explicitly to avoid a false "saved" message.
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Save did not complete');
+      }
+      alert(isEditingComparison ? '✅ Comparison updated successfully!' : '✅ Comparison saved successfully!');
       loadHistory();
     } catch (error) {
       console.error('Error saving:', error);
-      alert('⚠️ Error saving comparison');
+      alert('⚠️ Error saving comparison: ' + (error?.message || 'unknown error') + '. Your plans were NOT saved — please try again.');
     }
     try {
       const action = isEditingComparison ? 'edit_comparison' : 'create_comparison';
@@ -5048,7 +5059,7 @@ const addCustomField = () => {
     setCustomFields([...customFields, { key: fieldKey, label: newFieldName.trim(), section: newFieldSection }]);
     setNewFieldName('');
     // Initialize the custom field for all existing plans with empty values for each category
-    setPlans(plans.map(plan => {
+    setPlans(prev => prev.map(plan => {
       const initialData = {};
       plan.selectedCategories.forEach(cat => {
         initialData[cat] = '';
@@ -5065,7 +5076,7 @@ const addCustomField = () => {
 };
  const removeCustomField = (fieldKey) => {
   setCustomFields(customFields.filter(f => f.key !== fieldKey));
-  setPlans(plans.map(plan => {
+  setPlans(prev => prev.map(plan => {
     const newCategoriesData = { ...plan.categoriesData };
     delete newCategoriesData[fieldKey];
     return { ...plan, categoriesData: newCategoriesData };
@@ -5073,7 +5084,7 @@ const addCustomField = () => {
 };
 
  const updateCustomFieldValue = (planId, fieldKey, value) => {
-  setPlans(plans.map(plan => {
+  setPlans(prev => prev.map(plan => {
     if (plan.id === planId) {
       const updatedData = {};
       plan.selectedCategories.forEach(cat => {
@@ -5097,7 +5108,7 @@ const addCustomField = () => {
 // Back to Normal - Reset form without loading any 
 // Add this function in your PlanGenerator component
 const updatePlanCustomField = (planId, fieldKey, category, value) => {
-  setPlans(plans.map(plan => {
+  setPlans(prev => prev.map(plan => {
     if (plan.id === planId) {
       return {
         ...plan,
@@ -7192,7 +7203,7 @@ return (
         const grandTotal = totalPremium + pspFund + icpCharges;
 
         const newTOBPlan = {
-          id: Date.now(),
+          id: generateUniqueId(),
           providerName: extractedData.providerName || 'TOB Plan',
           tpa: extractedData.tpa || '',
           planType: 'SME',

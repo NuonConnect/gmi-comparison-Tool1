@@ -54,9 +54,49 @@ app.get('/api/comparisons', (req, res) => {
 // POST save comparisons
 app.post('/api/comparisons', (req, res) => {
   try {
-    const comparisons = req.body;
-    writeJsonFile('comparisons.json', comparisons);
-    res.json({ success: true });
+    const body = req.body;
+
+    // Granular operations (upsert / delete) do the read-modify-write on the
+    // server. Node is single-threaded and these handlers are synchronous, so
+    // concurrent saves no longer clobber each other's comparison.
+    if (body && !Array.isArray(body) && body.action) {
+      let comparisons = readJsonFile('comparisons.json');
+      if (!Array.isArray(comparisons)) comparisons = [];
+
+      if (body.action === 'upsert') {
+        const incoming = body.comparison;
+        if (!incoming || incoming.id == null) {
+          return res.status(400).json({ error: 'upsert requires a comparison with an id' });
+        }
+        const idx = comparisons.findIndex(c => String(c.id) === String(incoming.id));
+        if (idx === -1) {
+          comparisons.push(incoming);
+        } else {
+          comparisons[idx] = { ...comparisons[idx], ...incoming };
+        }
+        writeJsonFile('comparisons.json', comparisons);
+        const saved = idx === -1 ? incoming : comparisons[idx];
+        return res.json({ success: true, data: saved, count: comparisons.length });
+      }
+
+      if (body.action === 'delete') {
+        if (body.id == null) {
+          return res.status(400).json({ error: 'delete requires an id' });
+        }
+        const filtered = comparisons.filter(c => String(c.id) !== String(body.id));
+        writeJsonFile('comparisons.json', filtered);
+        return res.json({ success: true, count: filtered.length });
+      }
+
+      return res.status(400).json({ error: 'Unknown action: ' + body.action });
+    }
+
+    // Legacy contract: full array overwrite.
+    if (!Array.isArray(body)) {
+      return res.status(400).json({ error: 'Invalid data format. Expected an array or an action.' });
+    }
+    writeJsonFile('comparisons.json', body);
+    res.json({ success: true, count: body.length });
   } catch (error) {
     console.error('Error saving comparisons:', error);
     res.status(500).json({ error: 'Failed to save comparisons' });
