@@ -6098,19 +6098,19 @@ return (
                         </select>
                         {currentPlan.categoriesData?.network?.[currentPlan.selectedCategories[0]] === 'Other' && (
                           <textarea
-                            value={currentPlan.categoriesData?.networkOther?.[currentPlan.selectedCategories[0]] || ''}
+                            value={currentPlan.categoriesData?.network?.[`${currentPlan.selectedCategories[0]}Other`] || ''}
                             onChange={(e) => {
                               const networkOtherValue = e.target.value;
                               setCurrentPlan(prev => {
-                                const networkOtherData = {};
+                                const networkData = { ...(prev.categoriesData?.network || {}) };
                                 prev.selectedCategories.forEach(cat => {
-                                  networkOtherData[cat] = networkOtherValue;
+                                  networkData[`${cat}Other`] = networkOtherValue;
                                 });
                                 return {
                                   ...prev,
                                   categoriesData: {
                                     ...prev.categoriesData,
-                                    networkOther: networkOtherData
+                                    network: networkData
                                   }
                                 };
                               });
@@ -6442,8 +6442,8 @@ return (
                 </>
               )}
 
-             {/* Plan Tag textarea for SME and ENHANCED_CUSTOM */}
-{(planType === 'SME' || planType === 'ENHANCED_CUSTOM') && (
+             {/* Plan Tag textarea for SME, ENHANCED_CUSTOM and BASIC */}
+{(planType === 'SME' || planType === 'ENHANCED_CUSTOM' || planType === 'BASIC') && (
   <div className="mt-3">
     <label className="block text-xs font-bold text-gray-700 mb-1">
       Plan Tag (e.g., Renewal, New Business) - Will display as: Provider Name - Tag
