@@ -377,7 +377,7 @@ const TAKAFUL_EMARAT_TEMPLATES = {
     planName: 'Blue 2202',
     network: 'E Care Blue',
     accessForOP: 'Only Clinics & Medical Centers',
-    geographicalScope: 'UAE (Excluding the Emirate of Abu Dhabi & Al Ain Region). Emergency extension to UAE; Home country (IP only at ISC + SEA excluding China, Japan, HK, Taiwan, Thailand, Singapore)',
+    geographicalScope: 'UAE (Including the Emirate of Abu Dhabi & Al Ain Region). Emergency Extension to UAE, Home Country* (IP only at ISC + SEA excluding China, Japan, HK, Taiwan, Thailand, Singapore)',
     annualLimit: 'AED 150,000',
     ipCoinsurance: 'NIL',
     referralProcedure: 'GP referral to SP',
@@ -2169,12 +2169,13 @@ const isBlue2202Plan = (plan) => {
 // Ordered benefit rows for the Blue 2202 comparison (after the info rows +
 // blank separator). key = categoriesData field, label = display name.
 const BLUE_2202_BENEFIT_ROWS = [
-  { key: 'ipCoinsurance', label: 'IP Co-insurance' },
+  // Report-only left labels: "Co-insurance" is displayed as "Copay" for Blue 2202.
+  { key: 'ipCoinsurance', label: 'IP Copay' },
   { key: 'referralProcedure', label: 'Referral Procedure - OP' },
   { key: 'deductibleConsultation', label: 'Deductible (Consultation)' },
-  { key: 'opCoinsurance', label: 'OP Co-insurance' },
+  { key: 'opCoinsurance', label: 'OP Copay' },
   { key: 'pharmacyLimit', label: 'Pharmacy Limit' },
-  { key: 'pharmacyCoinsurance', label: 'Pharmacy Co-insurance' },
+  { key: 'pharmacyCoinsurance', label: 'Pharmacy Copay' },
   { key: 'prescribedPhysiotherapy', label: 'Physiotherapy Sessions' },
   { key: 'maternity', label: 'Maternity' },
   { key: 'dentalDiscounts', label: 'Dental Benefit' },
@@ -2196,6 +2197,26 @@ const BLUE_2202_FIELD_LABELS = {
   physiotherapySessions: 'Physiotherapy Sessions',
   maternity: 'Maternity',
   dentalDiscounts: 'Dental Benefit',
+};
+
+// Blue 2202 only: dependent ratio bands and the contribution (AED) per member
+// per annum that each band maps to. Used exclusively by the Blue 2202 variant of
+// the PREMIUM DETAILS card - no other plan/product reads this.
+const BLUE_2202_DEPENDENT_RATIO_OPTIONS = [
+  { label: 'Dependent ratio less than 20%', contribution: 826 },
+  { label: 'Dependent ratio 20% – 25%', contribution: 950 },
+  { label: 'Dependent ratio 26% – 30%', contribution: 991 },
+  { label: 'Dependent ratio 31% – 35%', contribution: 1033 },
+  { label: 'Dependent ratio 36% – 40%', contribution: 1074 },
+  { label: 'Dependent ratio 41% – 45%', contribution: 1115 },
+  { label: 'Dependent ratio 46% – 50%', contribution: 1156 },
+];
+
+// Returns the numeric contribution for a selected ratio, or null when nothing
+// (or an unknown value) is selected.
+const getBlue2202Contribution = (ratio) => {
+  const match = BLUE_2202_DEPENDENT_RATIO_OPTIONS.find(opt => opt.label === ratio);
+  return match ? match.contribution : null;
 };
 
 function generateHTMLContent(plans, companyInfo, advisorComment, referenceNumber, highlightedPlanId = null, highlightedItems = {}, customFields = [], showFirstPage = true, hideOptions = {}) {
@@ -2355,6 +2376,52 @@ const hasDHAManualPlan = plans.some(plan => plan.planType === 'DHA_MANUAL');
     }
   };
 
+  // Blue 2202 report-only variant of generateMergedRow. Identical layout/merge
+  // logic, but applies text-only display tweaks to each cell VALUE for Blue 2202
+  // plans (other insurers' cells are left untouched, and stored data is never
+  // mutated). Used ONLY by the Blue 2202 layout below:
+  //   - "NIL" is displayed as "Nil"
+  //   - "Co-Pay" is displayed as "Copay"
+  //   - Annual Limit "Covered up to AED X" is displayed as "AED X"
+  //   - Area of Cover always shows the fixed Blue 2202 wording below
+  const BLUE_2202_AREA_OF_COVER = 'UAE (Including the Emirate of Abu Dhabi & Al Ain Region). Emergency Extension to UAE, Home Country* (IP only at ISC + SEA excluding China, Japan, HK, Taiwan, Thailand, Singapore)';
+
+  const blue2202DisplayValue = (plan, fieldKey, value) => {
+    if (!isBlue2202Plan(plan)) return value;
+    if (fieldKey === 'areaOfCover') return BLUE_2202_AREA_OF_COVER;
+    if (typeof value !== 'string') return value;
+    let out = value.replace(/NIL/g, 'Nil').replace(/Co-Pay/gi, 'Copay');
+    if (fieldKey === 'aggregateLimit') {
+      out = out.replace(/^Covered up to\s+(AED[\s\d,]+)$/i, '$1');
+    }
+    return out;
+  };
+
+  const generateBlue2202Row = (fieldName, fieldKey, plans, highlightedPlanId) => {
+    const values = plans.map(plan => blue2202DisplayValue(plan, fieldKey, getFieldValue(plan, fieldKey)));
+    const nonDashValues = values.filter(v => v !== '-');
+
+    if (nonDashValues.length === 0) return '';
+
+    const allSame = nonDashValues.length > 0 && nonDashValues.every(v => v === nonDashValues[0]);
+
+    if (allSame && plans.length > 1 && nonDashValues.length === plans.length) {
+      return `
+        <tr>
+          <td class="benefit-name">${fieldName}</td>
+          <td colspan="${plans.length}" style="text-align: center; white-space: pre-line; background: #f0fdf4;">${nonDashValues[0]}</td>
+        </tr>
+      `;
+    } else {
+      return `
+        <tr>
+          <td class="benefit-name">${fieldName}</td>
+          ${plans.map((plan, i) => `<td style="text-align: center; white-space: pre-line;" class="${plan.id === highlightedPlanId ? 'benefit-cell highlighted' : ''}">${values[i]}</td>`).join('')}
+        </tr>
+      `;
+    }
+  };
+
   // ---- Blue 2202: fixed row list (reuses the existing generator) ----
   // When ANY Blue 2202 plan is present, the shared table below renders this fixed
   // list of rows in place of the normal benefit rows, and the first column header
@@ -2371,7 +2438,7 @@ const hasDHAManualPlan = plans.some(plan => plan.planType === 'DHA_MANUAL');
     // Information rows (fixed order). generateMergedRow maps each plan's value for
     // the field, or '-' when a plan does not have it.
     const infoRows = `
-      ${generateMergedRow('Product Name', 'planName', plans, highlightedPlanId)}
+      ${generateBlue2202Row('Product Name', 'planName', plans, highlightedPlanId)}
       <tr>
         <td class="benefit-name">Categories</td>
         ${plans.map(plan => infoCell(plan, plan.selectedCategories?.join(', ') || 'Not specified')).join('')}
@@ -2380,10 +2447,10 @@ const hasDHAManualPlan = plans.some(plan => plan.planType === 'DHA_MANUAL');
         <td class="benefit-name">TPA</td>
         ${plans.map(plan => infoCell(plan, plan.tpa || 'Not specified')).join('')}
       </tr>
-      ${generateMergedRow('Network', 'network', plans, highlightedPlanId)}
-      ${generateMergedRow('Access to OP', 'accessForOP', plans, highlightedPlanId)}
-      ${generateMergedRow('Area of Cover', 'areaOfCover', plans, highlightedPlanId)}
-      ${generateMergedRow('Annual Limit', 'aggregateLimit', plans, highlightedPlanId)}`;
+      ${generateBlue2202Row('Network', 'network', plans, highlightedPlanId)}
+      ${generateBlue2202Row('Access to OP', 'accessForOP', plans, highlightedPlanId)}
+      ${generateBlue2202Row('Area of Cover', 'areaOfCover', plans, highlightedPlanId)}
+      ${generateBlue2202Row('Annual Limit', 'aggregateLimit', plans, highlightedPlanId)}`;
 
     // "PLAN SUMMARY" section header (replaces the blank separator). Uses a <th>
     // so it inherits the exact same styling as the "PRODUCT" table header.
@@ -2391,7 +2458,7 @@ const hasDHAManualPlan = plans.some(plan => plan.planType === 'DHA_MANUAL');
 
     // Benefit rows (fixed order)
     const benefitRows = BLUE_2202_BENEFIT_ROWS
-      .map(row => generateMergedRow(row.label, row.key, plans, highlightedPlanId))
+      .map(row => generateBlue2202Row(row.label, row.key, plans, highlightedPlanId))
       .join('');
 
     // NOTE: the premium rows are NOT built here. The existing shared "PREMIUM
@@ -6792,7 +6859,102 @@ return (
           {/* PREMIUM DETAILS */}
           <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-4 rounded-lg border-2 border-yellow-300">
             <h3 className="font-bold text-yellow-900 mb-3 text-sm">💰 PREMIUM DETAILS</h3>
-            
+
+            {/* BLUE 2202 ONLY - dedicated two-column premium layout.
+                Isolated via isBlue2202Plan() so no other insurer/product is affected. */}
+            {isBlue2202Plan(currentPlan) ? (
+              <div className="grid grid-cols-2 gap-3">
+                {/* Row 1: CAT A Members | Dubai Members */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">CAT A Members</label>
+                  <input
+                    type="number"
+                    value={currentPlan.catAMembers || ''}
+                    onChange={(e) => handleNumberChange('catAMembers', parseInt(e.target.value) || 0)}
+                    className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Dubai Members</label>
+                  <input
+                    type="number"
+                    value={currentPlan.dubaiMembers || ''}
+                    onChange={(e) => handleNumberChange('dubaiMembers', parseInt(e.target.value) || 0)}
+                    className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Row 2: Northern Emirates Members | Policy Fee (AED) */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Northern Emirates Members</label>
+                  <input
+                    type="number"
+                    value={currentPlan.northernEmiratesMembers || ''}
+                    onChange={(e) => handleNumberChange('northernEmiratesMembers', parseInt(e.target.value) || 0)}
+                    className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500 no-spinner"
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Policy Fee (AED)</label>
+                  <input
+                    type="text"
+                    value={currentPlan.policyFee || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                        handleNumberChange('policyFee', value === '' ? 0 : value);
+                      }
+                    }}
+                    className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs focus:ring-2 focus:ring-yellow-500"
+                    placeholder="0"
+                  />
+                </div>
+
+                {/* Row 3: Dependent Ratio | Contribution (auto generated, read-only) */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Dependent Ratio</label>
+                  <select
+                    value={currentPlan.dependentRatio || ''}
+                    onChange={(e) => {
+                      const ratio = e.target.value;
+                      const contribution = getBlue2202Contribution(ratio);
+                      handleInputChange('dependentRatio', ratio);
+                      handleNumberChange('catAPremium', contribution === null ? 0 : contribution);
+                    }}
+                    className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs bg-white focus:ring-2 focus:ring-yellow-500"
+                  >
+                    <option value="">Select Dependent Ratio</option>
+                    {BLUE_2202_DEPENDENT_RATIO_OPTIONS.map(opt => (
+                      <option key={opt.label} value={opt.label}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Contribution (AED) <span className="font-normal text-gray-500">Per member per annum</span>
+                  </label>
+                  <input
+                    type="text"
+                    readOnly
+                    tabIndex={-1}
+                    value={
+                      getBlue2202Contribution(currentPlan.dependentRatio) === null
+                        ? ''
+                        : `${getBlue2202Contribution(currentPlan.dependentRatio).toLocaleString('en-US')}/-`
+                    }
+                    className="w-full p-2 border-2 border-yellow-300 rounded-lg text-xs bg-yellow-100 text-gray-800 font-bold cursor-not-allowed focus:outline-none"
+                    placeholder=""
+                  />
+                </div>
+              </div>
+            ) : (
+            <>
             <div className="grid grid-cols-2 gap-3">
               {/* For BASIC and ENHANCED_BASIC - show LSB/HSB or CAT A/B */}
               {planType !== 'SME' && planType !== 'ENHANCED_CUSTOM' && planType !== 'DHA_MANUAL' && (
@@ -7094,6 +7256,8 @@ return (
   placeholder="0"
 />
             </div>
+            </>
+            )}
           </div>
 
           <div className="flex gap-3">
