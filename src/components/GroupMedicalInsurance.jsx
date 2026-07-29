@@ -4320,9 +4320,17 @@ const isPreviousMonth = (d, ref) => {
   return isSameMonth(d, prev);
 };
 
+// Local YYYY-MM-DD key, so comparisons against <input type="date"> values
+// don't shift a day because of UTC conversion
+const toDateKey = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
 const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteComparison, onNewComparison, onBackToNormal, onRefresh }) => {
-  const [periodFilter, setPeriodFilter] = useState('all');   // all | thisMonth | lastMonth
+  const [periodFilter, setPeriodFilter] = useState('all');   // all | thisMonth | lastMonth | onDate | range
   const [advisorFilter, setAdvisorFilter] = useState('all');
+  const [specificDate, setSpecificDate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Reset filters whenever the modal is (re)opened
@@ -4330,6 +4338,9 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
     if (isOpen) {
       setPeriodFilter('all');
       setAdvisorFilter('all');
+      setSpecificDate('');
+      setDateFrom('');
+      setDateTo('');
     }
   }, [isOpen]);
 
@@ -4365,6 +4376,12 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
         const d = new Date(item.date);
         if (periodFilter === 'thisMonth' && !isSameMonth(d, now)) return false;
         if (periodFilter === 'lastMonth' && !isPreviousMonth(d, now)) return false;
+        if (periodFilter === 'onDate' && specificDate && toDateKey(d) !== specificDate) return false;
+        if (periodFilter === 'range') {
+          const key = toDateKey(d);
+          if (dateFrom && key < dateFrom) return false;
+          if (dateTo && key > dateTo) return false;
+        }
       }
       // Advisor
       if (advisorFilter !== 'all') {
@@ -4373,7 +4390,7 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
       }
       return true;
     });
-  }, [history, periodFilter, advisorFilter]);
+  }, [history, periodFilter, advisorFilter, specificDate, dateFrom, dateTo]);
 
   const handleRefresh = async () => {
     if (!onRefresh) return;
@@ -4444,8 +4461,45 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
                 <option value="all">All time</option>
                 <option value="thisMonth">This month</option>
                 <option value="lastMonth">Last month</option>
+                <option value="onDate">On a specific date…</option>
+                <option value="range">Date range…</option>
               </select>
             </div>
+            {periodFilter === 'onDate' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={specificDate}
+                  onChange={(e) => setSpecificDate(e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </div>
+            )}
+            {periodFilter === 'range' && (
+              <div className="flex gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">From</label>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    max={dateTo || undefined}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">To</label>
+                  <input
+                    type="date"
+                    value={dateTo}
+                    min={dateFrom || undefined}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  />
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Advisor</label>
               <select
