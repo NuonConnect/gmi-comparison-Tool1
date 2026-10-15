@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import netlifyIdentity from 'netlify-identity-widget';
 
 const AuthContext = createContext({});
@@ -67,6 +67,17 @@ export const AuthProvider = ({ children }) => {
     netlifyIdentity.logout();
   };
 
+  // The signed-in user's Identity access token, for API calls that check who
+  // is asking (the Zoho search). jwt() refreshes it when it's about to expire.
+  // Stable across renders, so it's safe in an effect's dependencies.
+  const getAccessToken = useCallback(async () => {
+    try {
+      return (await netlifyIdentity.currentUser()?.jwt()) || '';
+    } catch {
+      return '';
+    }
+  }, []);
+
   const logActivity = async (action, details = {}) => {
     if (!user) return;
     
@@ -98,7 +109,8 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     logout,
-    logActivity
+    logActivity,
+    getAccessToken
   };
 
   return (

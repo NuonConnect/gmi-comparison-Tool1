@@ -3,6 +3,8 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import zohoEnquiries from './netlify/functions/zoho-enquiries.js';
+import workdrivePdf from './netlify/functions/workdrive-pdf.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -155,6 +157,38 @@ app.delete('/api/custom-companies', (req, res) => {
   } catch (error) {
     console.error('Error deleting custom company:', error);
     res.status(500).json({ error: 'Failed to delete custom company' });
+  }
+});
+
+// ============================================
+// ZOHO ENQUIRIES + WORKDRIVE
+// ============================================
+
+// Runs the Netlify function unchanged, so local searches behave exactly as
+// they do when deployed.
+app.get('/api/zoho-enquiries', async (req, res) => {
+  try {
+    const response = await zohoEnquiries(new Request(`http://localhost${req.originalUrl}`, {
+      headers: { authorization: req.headers.authorization || '' },
+    }));
+    res.status(response.status).type('application/json').send(await response.text());
+  } catch (error) {
+    console.error('Zoho Enquiries Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/workdrive-pdf', express.raw({ type: 'application/pdf', limit: '10mb' }), async (req, res) => {
+  try {
+    const response = await workdrivePdf(new Request(`http://localhost${req.originalUrl}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/pdf', authorization: req.headers.authorization || '' },
+      body: Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0),
+    }));
+    res.status(response.status).type('application/json').send(await response.text());
+  } catch (error) {
+    console.error('WorkDrive PDF Error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

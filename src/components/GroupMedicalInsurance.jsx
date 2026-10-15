@@ -3,7 +3,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { saveComparison, updateComparison, getUserComparisons, deleteComparison as deleteComparisonFromDb, logActivity, getAllComparisons } from '../utils/netlifyDb';
 import UserHeader from './UserHeader';
 import AdminDashboard from './AdminDashboard';
-import TOBUploader from './TOBUploader';  
+import TOBUploader from './TOBUploader';
+import EnquiryPicker from './EnquiryPicker';
+import { fileInWorkDrive } from '../utils/zoho';
+import { reportToPdf } from '../utils/reportPdf';
 
 // ============================================================================
 // SECTION 1: CONSTANTS & DATA
@@ -4535,7 +4538,10 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="font-bold text-gray-800">{item.companyName}</h3>
-                    <p className="text-sm text-gray-600">Reference: {item.referenceNumber}</p>
+                    <p className="text-sm text-gray-600">
+                      Reference: {item.referenceNumber}
+                      {item.enquiry?.enquiryNo ? ` • Zoho ${item.enquiry.enquiryNo}` : ''}
+                    </p>
                     <p className="text-xs text-gray-500">
                       {new Date(item.date).toLocaleDateString()} • {item.plans.length} plans
                       {item.createdBy ? ` • by ${item.createdBy}` : ''}
@@ -4592,7 +4598,7 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
 
 // -------- Plan Generator Component --------
 function PlanGenerator() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, getAccessToken } = useAuth();
   
   const [planType, setPlanType] = useState('SME');
   const [plans, setPlans] = useState([]);
@@ -4643,6 +4649,10 @@ const [currentPlan, setCurrentPlan] = useState({
   const [showHistoryManager, setShowHistoryManager] = useState(false);
   const [isEditingComparison, setIsEditingComparison] = useState(false);
   const [currentComparisonId, setCurrentComparisonId] = useState(null);
+  // The Zoho CRM enquiry this comparison is for; saving files its PDF in the
+  // enquiry's WorkDrive folder.
+  const [enquiry, setEnquiry] = useState(null);
+  const [savingToWorkDrive, setSavingToWorkDrive] = useState(false);
   const [history, setHistory] = useState([]);
 const [showAdminDashboard, setShowAdminDashboard] = useState(false);
 const [showTOBUploader, setShowTOBUploader] = useState(false);
@@ -5351,7 +5361,26 @@ const editPlan = (plan) => {
     await saveTOBRecordsToCloud(updated);
   };
 
-  const saveAndDownload = async () => {
+  // Files a report in the enquiry's WorkDrive folder and says how it went.
+  const fileReport = async (html, referenceNumber, target) => {
+    let result;
+    try {
+      const pdf = await reportToPdf(html);
+      result = await fileInWorkDrive({ pdf, enquiryId: target.id, reference: referenceNumber, token: await getAccessToken() });
+    } catch (error) {
+      result = { ok: false, error: error?.message || 'Could not make the PDF.' };
+    }
+    if (result.ok) {
+      alert(`☁️ Saved to ${result.enquiryNo || target.enquiryNo} WorkDrive as ${result.fileName}.`);
+    } else {
+      alert(`⚠️ Not saved to WorkDrive: ${result.error}`);
+    }
+  };
+
+  // Saves the comparison on screen. `print` opens the print dialog for the
+  // advisor's own copy; with an enquiry linked, its PDF is also filed in that
+  // enquiry's WorkDrive.
+  const saveCurrentComparison = async ({ print }) => {
     if (!companyInfo.companyName) {
         alert('Please enter company name');
         return;
@@ -5382,9 +5411,11 @@ const editPlan = (plan) => {
     !hideFirstPage,
    { hideProviderNames, hiddenFields, hideBrokerBranding, hideCompanyLogos }
   );
+    if (print) {
       const fileName = `${companyInfo.companyName.replace(/\s+/g, '_')}_Insurance_Comparison_${referenceNumber}.html`;
       downloadHTMLFile(htmlContent, fileName);
-      
+    }
+
 const comparison = {
         companyName: companyInfo.companyName,
         referenceNumber,
@@ -5394,6 +5425,7 @@ const comparison = {
         highlightedPlanId,
         highlightedItems,
         customFields,
+        enquiry,
         createdBy: user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'Unknown',
         createdByEmail: user?.email || null,
         isFromTOB: plans.some(p => p.isFromTOB),
@@ -5420,7 +5452,7 @@ const comparison = {
     }
     try {
       const action = isEditingComparison ? 'edit_comparison' : 'create_comparison';
-      await logActivity(user, action, { companyName: companyInfo.companyName, referenceNumber });
+      await logActivity(user, action, { companyName: companyInfo.companyName, referenceNumber, enquiryNo: enquiry?.enquiryNo || null });
     } catch (e) {
       console.error('Error logging activity:', e);
     }
@@ -5428,6 +5460,48 @@ const comparison = {
     // Reset editing state
     setIsEditingComparison(false);
     setCurrentComparisonId(null);
+
+    // Filed even if the save above failed: the PDF in WorkDrive is what the
+    // client is sent, and the advisor has already been told about the save.
+    if (enquiry?.hasFolder) {
+      setSavingToWorkDrive(true);
+      try {
+        await fileReport(htmlContent, referenceNumber, enquiry);
+      } finally {
+        setSavingToWorkDrive(false);
+      }
+    }
+  };
+
+  const saveAndDownload = () => saveCurrentComparison({ print: true });
+
+  // For advisors who changed a comparison but don't need another copy of their own.
+  const saveToWorkDrive = () => {
+    if (!enquiry) {
+      alert('Link a Zoho enquiry first, under Company Information.');
+      return;
+    }
+    if (!enquiry.hasFolder) {
+      alert(`${enquiry.enquiryNo} has no WorkDrive folder yet.`);
+      return;
+    }
+    return saveCurrentComparison({ print: false });
+  };
+
+  // Linking an enquiry to a comparison opened from Saved History records the
+  // link straight away: it was most likely sent already, and nobody re-saves
+  // a quote just to link it.
+  const handleEnquirySelect = async (selected) => {
+    setEnquiry(selected);
+    if (!selected || !isEditingComparison || !currentComparisonId) return;
+    if (!history.some(h => h.id === currentComparisonId)) return;
+
+    const result = await updateComparison(currentComparisonId, { enquiry: selected }, user);
+    if (!result?.success) {
+      alert(`⚠️ Could not link ${selected.enquiryNo} to the saved comparison: ${result?.error || 'unknown error'}`);
+      return;
+    }
+    loadHistory();
   };
 
   const handleHighlightPlan = (planId) => {
@@ -5521,7 +5595,8 @@ const handleBackToNormal = () => {
   setCustomFields([]);
   setIsEditingComparison(false);
   setCurrentComparisonId(null);
-  
+  setEnquiry(null);
+
   // Reset current plan to default SME state
   setCurrentPlan({
     id: null,
@@ -5569,7 +5644,8 @@ const handleBackToNormal = () => {
     // Set editing mode
     setIsEditingComparison(true);
     setCurrentComparisonId(comparison.id);
-    
+    setEnquiry(comparison.enquiry || null);
+
     // Reset current plan form
     setCurrentPlan({
       id: null,
@@ -5614,7 +5690,8 @@ const handleBackToNormal = () => {
     setCustomFields([]);
     setIsEditingComparison(false);
     setCurrentComparisonId(null);
-    
+    setEnquiry(null);
+
     // Reset current plan
     setCurrentPlan({
       id: null,
@@ -6210,6 +6287,7 @@ return (
       setCustomFields(comparison.customFields || []);
       setIsEditingComparison(true);
       setCurrentComparisonId(comparison.id);
+      setEnquiry(comparison.enquiry || null);
       setShowAdminDashboard(false);
       alert('✅ Comparison loaded! You can now edit and re-save.');
     }}
@@ -6371,6 +6449,15 @@ return (
                     placeholder="Enter company name"
                   />
                 )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Zoho Enquiry</label>
+                <EnquiryPicker
+                  companyName={companyInfo.companyName}
+                  enquiry={enquiry}
+                  onSelect={handleEnquirySelect}
+                />
               </div>
 
               <div>
@@ -7478,6 +7565,22 @@ return (
 >
   🖨️ Print / Save PDF
 </button>
+          {/* Always shown so advisors can find it; without a linked enquiry
+              that has a folder, clicking says what's missing. */}
+          <button
+            onClick={saveToWorkDrive}
+            disabled={savingToWorkDrive}
+            title={
+              enquiry?.hasFolder
+                ? `Save and file the PDF in ${enquiry.enquiryNo}'s WorkDrive, without printing`
+                : 'Link a Zoho enquiry with a WorkDrive folder first, under Company Information'
+            }
+            className={`text-white px-4 py-2 rounded-lg font-bold transition text-sm disabled:opacity-60 ${
+              enquiry?.hasFolder ? 'bg-amber-600 hover:bg-amber-700' : 'bg-gray-400 hover:bg-gray-500'
+            }`}
+          >
+            {savingToWorkDrive ? '⏳ Saving to WorkDrive…' : '☁️ Save to WorkDrive'}
+          </button>
         </div>
       </div>
 
