@@ -115,3 +115,7 @@ export default async (req, context) => {
     return json(error.status || 502, { error: error.message || 'Zoho search failed.' });
   }
 };
+
+export const config = {
+  path: "/api/zoho-enquiries"
+};

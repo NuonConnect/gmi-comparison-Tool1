@@ -66,3 +66,7 @@ export default async (req, context) => {
     return json(error.status || 500, { error: error.message || 'Could not save to WorkDrive.' });
   }
 };
+
+export const config = {
+  path: "/api/workdrive-pdf"
+};
