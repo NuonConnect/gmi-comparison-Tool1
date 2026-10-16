@@ -73,19 +73,6 @@ const tpaOf = (c) => {
 
 const createdAt = (c) => c.created_at || c.date || null;
 
-// updated_at is written on every save, so it only means an edit when it is
-// later than created_at. lastEditedBy is recorded from Oct 2026 onwards.
-const wasEdited = (c) =>
-  !!c.lastEditedBy ||
-  (c.updated_at && c.created_at && new Date(c.updated_at) - new Date(c.created_at) > 1000);
-
-const planStatus = (plan) => {
-  if (plan.isRecommended && plan.isRenewal) return 'Recommended & Renewal';
-  if (plan.isRecommended) return 'Recommended';
-  if (plan.isRenewal) return 'Renewal';
-  return null;
-};
-
 // ---------------------------------------------------------------------------
 // Columns
 // ---------------------------------------------------------------------------
@@ -111,15 +98,8 @@ const COMPARISON_COLUMNS = [
   { key: 'lowest', header: 'Lowest Premium (AED)', width: 14, kind: 'money' },
   { key: 'highest', header: 'Highest Premium (AED)', width: 14, kind: 'money' },
   { key: 'spread', header: 'Spread (AED)', width: 14, kind: 'money' },
-  { key: 'recName', header: 'Recommended Plan', width: 26, kind: 'text' },
-  { key: 'recPremium', header: 'Recommended Premium (AED)', width: 15, kind: 'money' },
-  { key: 'renName', header: 'Renewal Plan', width: 26, kind: 'text' },
-  { key: 'renPremium', header: 'Renewal Premium (AED)', width: 15, kind: 'money' },
-  { key: 'difference', header: 'Difference vs Renewal (AED)', width: 16, kind: 'money' },
   { key: 'createdBy', header: 'Created By', width: 18, kind: 'text' },
   { key: 'createdAt', header: 'Created Date', width: 17, kind: 'date' },
-  { key: 'editedBy', header: 'Last Edited By', width: 18, kind: 'text' },
-  { key: 'editedAt', header: 'Last Edited Date', width: 17, kind: 'date' },
 ];
 
 const PLAN_COLUMNS = [
@@ -130,7 +110,6 @@ const PLAN_COLUMNS = [
   { key: 'tpa', header: 'TPA', width: 12, kind: 'center' },
   { key: 'insurer', header: 'Insurer', width: 30, kind: 'text' },
   { key: 'planTag', header: 'Plan Tag', width: 16, kind: 'text' },
-  { key: 'productName', header: 'Product Name', width: 20, kind: 'wrap' },
   { key: 'planType', header: 'Plan Type', width: 28, kind: 'text' },
   { key: 'network', header: 'Network', width: 22, kind: 'wrap' },
   { key: 'annualLimit', header: 'Annual Limit', width: 18, kind: 'wrap' },
@@ -139,7 +118,6 @@ const PLAN_COLUMNS = [
   { key: 'members', header: 'Members', width: 12, kind: 'int' },
   { key: 'dubaiMembers', header: 'Dubai Members', width: 14, kind: 'int' },
   { key: 'neMembers', header: 'Northern Emirates Members', width: 14, kind: 'int' },
-  { key: 'status', header: 'Status', width: 22, kind: 'center' },
   { key: 'net', header: 'Net Premium (AED)', width: 14, kind: 'money' },
   { key: 'fees', header: 'Fees & Levies (AED)', width: 13, kind: 'money' },
   { key: 'vat', header: 'VAT (AED)', width: 12, kind: 'money' },
@@ -162,11 +140,6 @@ const comparisonRow = (c) => {
   // The census (members, emirates) is the same for every plan in practice;
   // the largest is taken in case one plan was left part-filled.
   const census = plans.reduce((best, p) => (!best || members(p) > members(best) ? p : best), null);
-  const rec = plans.find((p) => p.isRecommended);
-  const ren = plans.find((p) => p.isRenewal);
-  const recPremium = rec ? premiums(rec).total : null;
-  const renPremium = ren ? premiums(ren).total : null;
-  const edited = wasEdited(c);
 
   return {
     ref: c.referenceNumber,
@@ -193,15 +166,8 @@ const comparisonRow = (c) => {
     lowest,
     highest,
     spread: totals.length ? highest - lowest : null,
-    recName: rec ? planLabel(rec) : null,
-    recPremium,
-    renName: ren ? planLabel(ren) : null,
-    renPremium,
-    difference: recPremium != null && renPremium != null ? recPremium - renPremium : null,
     createdBy: c.createdBy,
     createdAt: createdAt(c),
-    editedBy: edited ? c.lastEditedBy : null,
-    editedAt: edited ? c.updated_at : null,
   };
 };
 
@@ -228,7 +194,6 @@ const planRows = (c) => {
       tpa: p.tpa || tpaOf(c),
       insurer: insurerName(p),
       planTag: p.planTag,
-      productName: flatten(cd.planName),
       planType: PLAN_TYPES[p.planType] || p.planType,
       network: flatten(cd.network),
       annualLimit: blank(p.annualLimit) || flatten(cd.aggregateLimit),
@@ -237,7 +202,6 @@ const planRows = (c) => {
       members: members(p) || null,
       dubaiMembers: Number(p.dubaiMembers) || null,
       neMembers: Number(p.northernEmiratesMembers) || null,
-      status: planStatus(p),
       ...money,
       cheapest: money.total == null ? null : money.total === lowest ? 'Yes' : 'No',
     };
