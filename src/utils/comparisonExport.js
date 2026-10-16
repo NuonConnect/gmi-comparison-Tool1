@@ -1,8 +1,8 @@
 // Excel export of the Saved History list: exactly the comparisons the current
 // filters show, either one row per comparison or one row per plan (for pivot
-// tables). This part only names and saves the file; the workbook itself, with
-// exceljs, is in comparisonWorkbook.js and is loaded only when someone
-// exports, so it stays out of the app's main bundle.
+// tables). This part only names and saves the file; the workbook itself is
+// built in comparisonWorkbook.js.
+import { buildWorkbook } from './comparisonWorkbook.js';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const PRODUCT = 'GroupMedical';
@@ -42,8 +42,8 @@ export function exportFileName(layout, filters) {
 // ---------------------------------------------------------------------------
 
 // Asks where to save straight away, while the click still counts as a user
-// gesture (the picker refuses to open once that has lapsed, and loading
-// exceljs can take a moment). Resolves to null if the user cancels.
+// gesture (the picker refuses to open once that has lapsed). Resolves to null
+// if the user cancels.
 async function chooseSaveTarget(fileName) {
   if (typeof window.showSaveFilePicker !== 'function') return { download: true };
   try {
@@ -84,12 +84,10 @@ export async function exportComparisons({ comparisons, layout, filters, info }) 
   const target = await chooseSaveTarget(fileName);
   if (!target) return null;
 
-  const { buildWorkbook } = await import('./comparisonWorkbook.js');
-  const { workbook, rowCount } = buildWorkbook(comparisons, layout, {
+  const { blob, rowCount } = buildWorkbook(comparisons, layout, {
     ...info,
     period: describePeriod(filters),
   });
-  const buffer = await workbook.xlsx.writeBuffer();
-  await writeSaveTarget(target, new Blob([buffer], { type: XLSX_MIME }), fileName);
+  await writeSaveTarget(target, blob, fileName);
   return { rowCount, fileName };
 }

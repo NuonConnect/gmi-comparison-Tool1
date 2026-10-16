@@ -1,26 +1,10 @@
-// The Saved History workbook: columns, rows and styling for the Excel export.
-// Loaded only when someone exports (see comparisonExport.js), so exceljs
-// stays out of the app's main bundle.
+// The Saved History workbook: columns and rows for the Excel export, laid out
+// in the NSIB theme by xlsx.js (title, notes of the filters used, then a
+// maroon header row with filter arrows and frozen panes).
 //
 // Touches no browser APIs, so it can also be run from Node to check the layout.
-import ExcelJS from 'exceljs';
 import { calculatePlanTotals } from './planTotals.js';
-
-const COLORS = {
-  comparison: 'b91c1c',
-  enquiry: '1f3a5f',
-  client: '0f766e',
-  plans: '6d28d9',
-  premiums: '15803d',
-  recommended: 'a16207',
-  record: '4b5563',
-};
-
-const PILLS = {
-  green: { fill: 'dcfce7', font: '166534' },
-  amber: { fill: 'fef3c7', font: '92400e' },
-  blue: { fill: 'dbeafe', font: '1e40af' },
-};
+import { buildReportXlsx } from './xlsx.js';
 
 const PLAN_TYPES = {
   SME: 'SME',
@@ -29,16 +13,6 @@ const PLAN_TYPES = {
   DHA_MANUAL: 'Enhanced Basic (DHA Enhanced)',
   ENHANCED_CUSTOM: 'Enhanced Basic (Custom)',
 };
-
-const argb = (hex) => `FF${hex.toUpperCase()}`;
-
-// The colour mixed `amount` of the way to white: 0.82 gives the light tint
-// behind each group's column headers.
-const tint = (hex, amount = 0.82) =>
-  [0, 2, 4]
-    .map((i) => parseInt(hex.slice(i, i + 2), 16))
-    .map((c) => Math.round(c + (255 - c) * amount).toString(16).padStart(2, '0'))
-    .join('');
 
 // ---------------------------------------------------------------------------
 // Reading a saved comparison
@@ -115,111 +89,64 @@ const planStatus = (plan) => {
 // ---------------------------------------------------------------------------
 // Columns
 // ---------------------------------------------------------------------------
+// kind: text | ref (bold, first column) | center | int | money | date | wrap
 
-const newRenewalPill = (v) => (v === 'Renewal' ? PILLS.amber : v === 'New' ? PILLS.green : null);
-const yesPill = (v) => (v === 'Yes' ? PILLS.green : null);
-const statusPill = (v) => (v === 'Renewal' ? PILLS.blue : v ? PILLS.amber : null);
-
-const COMPARISON_GROUPS = [
-  {
-    title: 'Comparison', color: COLORS.comparison, columns: [
-      { key: 'ref', header: 'Quote Ref No.', width: 16 },
-      { key: 'business', header: 'New / Renewal', width: 12, pill: newRenewalPill },
-    ],
-  },
-  {
-    title: 'Zoho Enquiry', color: COLORS.enquiry, columns: [
-      { key: 'enquiryNo', header: 'Enquiry No.', width: 14 },
-      { key: 'enquiryName', header: 'Enquiry Name', width: 30 },
-      { key: 'insuranceType', header: 'Insurance Type', width: 16 },
-      { key: 'subType', header: 'Insurance Sub-type', width: 16 },
-    ],
-  },
-  {
-    title: 'Client', color: COLORS.client, columns: [
-      { key: 'company', header: 'Company Name', width: 32 },
-      { key: 'tpa', header: 'TPA', width: 12 },
-      { key: 'planTypes', header: 'Plan Type', width: 20 },
-      { key: 'categories', header: 'Categories', width: 16 },
-      { key: 'members', header: 'Members', width: 10, type: 'int' },
-      { key: 'dubaiMembers', header: 'Dubai Members', width: 10, type: 'int' },
-      { key: 'neMembers', header: 'Northern Emirates Members', width: 14, type: 'int' },
-    ],
-  },
-  {
-    title: 'Plans', color: COLORS.plans, columns: [
-      { key: 'planCount', header: 'No. of Plans', width: 9, type: 'int' },
-      { key: 'insurers', header: 'Insurers Quoted', width: 34, wrap: true },
-      { key: 'plansCompared', header: 'Plans Compared', width: 60, wrap: true },
-    ],
-  },
-  {
-    title: 'Premiums (AED, incl. VAT)', color: COLORS.premiums, columns: [
-      { key: 'lowest', header: 'Lowest', width: 14, type: 'money' },
-      { key: 'highest', header: 'Highest', width: 14, type: 'money' },
-      { key: 'spread', header: 'Spread', width: 14, type: 'money' },
-    ],
-  },
-  {
-    title: 'Recommended vs Renewal (AED)', color: COLORS.recommended, columns: [
-      { key: 'recName', header: 'Recommended Plan', width: 26 },
-      { key: 'recPremium', header: 'Recommended Premium', width: 15, type: 'money' },
-      { key: 'renName', header: 'Renewal Plan', width: 26 },
-      { key: 'renPremium', header: 'Renewal Premium', width: 15, type: 'money' },
-      { key: 'difference', header: 'Difference', width: 14, type: 'money', sign: true },
-    ],
-  },
-  {
-    title: 'Record', color: COLORS.record, columns: [
-      { key: 'createdBy', header: 'Created By', width: 18 },
-      { key: 'createdAt', header: 'Created Date', width: 17, type: 'date' },
-      { key: 'editedBy', header: 'Last Edited By', width: 18 },
-      { key: 'editedAt', header: 'Last Edited Date', width: 17, type: 'date' },
-    ],
-  },
+const COMPARISON_COLUMNS = [
+  { key: 'ref', header: 'Quote Ref No.', width: 16, kind: 'ref' },
+  { key: 'business', header: 'New / Renewal', width: 14, kind: 'center' },
+  { key: 'enquiryNo', header: 'Enquiry No.', width: 14, kind: 'text' },
+  { key: 'enquiryName', header: 'Enquiry Name', width: 30, kind: 'text' },
+  { key: 'insuranceType', header: 'Insurance Type', width: 16, kind: 'text' },
+  { key: 'subType', header: 'Insurance Sub-type', width: 18, kind: 'text' },
+  { key: 'company', header: 'Company Name', width: 32, kind: 'text' },
+  { key: 'tpa', header: 'TPA', width: 16, kind: 'wrap' },
+  { key: 'planTypes', header: 'Plan Type', width: 28, kind: 'wrap' },
+  { key: 'categories', header: 'Categories', width: 16, kind: 'text' },
+  { key: 'members', header: 'Members', width: 12, kind: 'int' },
+  { key: 'dubaiMembers', header: 'Dubai Members', width: 14, kind: 'int' },
+  { key: 'neMembers', header: 'Northern Emirates Members', width: 14, kind: 'int' },
+  { key: 'planCount', header: 'No. of Plans', width: 13, kind: 'int' },
+  { key: 'insurers', header: 'Insurers Quoted', width: 34, kind: 'wrap' },
+  { key: 'plansCompared', header: 'Plans Compared', width: 60, kind: 'wrap' },
+  { key: 'lowest', header: 'Lowest Premium (AED)', width: 14, kind: 'money' },
+  { key: 'highest', header: 'Highest Premium (AED)', width: 14, kind: 'money' },
+  { key: 'spread', header: 'Spread (AED)', width: 14, kind: 'money' },
+  { key: 'recName', header: 'Recommended Plan', width: 26, kind: 'text' },
+  { key: 'recPremium', header: 'Recommended Premium (AED)', width: 15, kind: 'money' },
+  { key: 'renName', header: 'Renewal Plan', width: 26, kind: 'text' },
+  { key: 'renPremium', header: 'Renewal Premium (AED)', width: 15, kind: 'money' },
+  { key: 'difference', header: 'Difference vs Renewal (AED)', width: 16, kind: 'money' },
+  { key: 'createdBy', header: 'Created By', width: 18, kind: 'text' },
+  { key: 'createdAt', header: 'Created Date', width: 17, kind: 'date' },
+  { key: 'editedBy', header: 'Last Edited By', width: 18, kind: 'text' },
+  { key: 'editedAt', header: 'Last Edited Date', width: 17, kind: 'date' },
 ];
 
-const PLAN_GROUPS = [
-  {
-    title: 'Comparison', color: COLORS.comparison, columns: [
-      { key: 'ref', header: 'Quote Ref No.', width: 16 },
-      { key: 'business', header: 'New / Renewal', width: 12, pill: newRenewalPill },
-      { key: 'enquiryNo', header: 'Enquiry No.', width: 14 },
-      { key: 'company', header: 'Client Name', width: 32 },
-      { key: 'tpa', header: 'TPA', width: 12 },
-    ],
-  },
-  {
-    title: 'Plan', color: COLORS.plans, columns: [
-      { key: 'insurer', header: 'Insurer', width: 30 },
-      { key: 'planTag', header: 'Plan Tag', width: 16 },
-      { key: 'productName', header: 'Product Name', width: 20, wrap: true },
-      { key: 'planType', header: 'Plan Type', width: 20 },
-      { key: 'network', header: 'Network', width: 22, wrap: true },
-      { key: 'annualLimit', header: 'Annual Limit', width: 18, wrap: true },
-      { key: 'areaOfCover', header: 'Area of Cover', width: 24, wrap: true },
-      { key: 'categories', header: 'Categories', width: 16 },
-      { key: 'members', header: 'Members', width: 10, type: 'int' },
-      { key: 'dubaiMembers', header: 'Dubai Members', width: 10, type: 'int' },
-      { key: 'neMembers', header: 'Northern Emirates Members', width: 14, type: 'int' },
-      { key: 'status', header: 'Status', width: 22, pill: statusPill },
-    ],
-  },
-  {
-    title: 'Premium (AED)', color: COLORS.premiums, columns: [
-      { key: 'net', header: 'Net Premium', width: 14, type: 'money' },
-      { key: 'fees', header: 'Fees & Levies', width: 13, type: 'money' },
-      { key: 'vat', header: 'VAT', width: 12, type: 'money' },
-      { key: 'total', header: 'Total Premium', width: 14, type: 'money' },
-      { key: 'cheapest', header: 'Cheapest in Comparison', width: 13, pill: yesPill },
-    ],
-  },
-  {
-    title: 'Record', color: COLORS.record, columns: [
-      { key: 'createdBy', header: 'Created By', width: 18 },
-      { key: 'createdAt', header: 'Created Date', width: 17, type: 'date' },
-    ],
-  },
+const PLAN_COLUMNS = [
+  { key: 'ref', header: 'Quote Ref No.', width: 16, kind: 'ref' },
+  { key: 'business', header: 'New / Renewal', width: 14, kind: 'center' },
+  { key: 'enquiryNo', header: 'Enquiry No.', width: 14, kind: 'text' },
+  { key: 'company', header: 'Client Name', width: 32, kind: 'text' },
+  { key: 'tpa', header: 'TPA', width: 12, kind: 'center' },
+  { key: 'insurer', header: 'Insurer', width: 30, kind: 'text' },
+  { key: 'planTag', header: 'Plan Tag', width: 16, kind: 'text' },
+  { key: 'productName', header: 'Product Name', width: 20, kind: 'wrap' },
+  { key: 'planType', header: 'Plan Type', width: 28, kind: 'text' },
+  { key: 'network', header: 'Network', width: 22, kind: 'wrap' },
+  { key: 'annualLimit', header: 'Annual Limit', width: 18, kind: 'wrap' },
+  { key: 'areaOfCover', header: 'Area of Cover', width: 24, kind: 'wrap' },
+  { key: 'categories', header: 'Categories', width: 16, kind: 'text' },
+  { key: 'members', header: 'Members', width: 12, kind: 'int' },
+  { key: 'dubaiMembers', header: 'Dubai Members', width: 14, kind: 'int' },
+  { key: 'neMembers', header: 'Northern Emirates Members', width: 14, kind: 'int' },
+  { key: 'status', header: 'Status', width: 22, kind: 'center' },
+  { key: 'net', header: 'Net Premium (AED)', width: 14, kind: 'money' },
+  { key: 'fees', header: 'Fees & Levies (AED)', width: 13, kind: 'money' },
+  { key: 'vat', header: 'VAT (AED)', width: 12, kind: 'money' },
+  { key: 'total', header: 'Total Premium (AED)', width: 14, kind: 'money' },
+  { key: 'cheapest', header: 'Cheapest in Comparison', width: 13, kind: 'center' },
+  { key: 'createdBy', header: 'Created By', width: 18, kind: 'text' },
+  { key: 'createdAt', header: 'Created Date', width: 17, kind: 'date' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -321,126 +248,52 @@ const planRows = (c) => {
 // Workbook
 // ---------------------------------------------------------------------------
 
-// Excel dates have no time zone and exceljs writes a Date as UTC, so each one
-// is shifted by the local offset first; otherwise times show 4 hours early in
-// the UAE.
-const toExcelDate = (value) => {
+// Real Date objects, so Excel can sort and filter them as dates; xlsx.js
+// writes them in local time.
+const toDate = (value) => {
   if (!value) return null;
   const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return Number.isNaN(d.getTime()) ? null : d;
 };
 
 const cellValue = (col, v) => {
-  if (col.type === 'date') return toExcelDate(v);
-  if (col.type === 'money' || col.type === 'int') return typeof v === 'number' && Number.isFinite(v) ? v : null;
-  return blank(v);
+  if (col.kind === 'date') return toDate(v);
+  if (col.kind === 'money') return typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 100) / 100 : null;
+  if (col.kind === 'int') return typeof v === 'number' && Number.isFinite(v) ? v : null;
+  return blank(v) == null ? null : String(v);
 };
 
-const solid = (hex) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: argb(hex) } });
-const thin = { style: 'thin', color: { argb: argb('d9d9d9') } };
-const THIN_BORDER = { top: thin, left: thin, bottom: thin, right: thin };
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const pad = (n) => String(n).padStart(2, '0');
+// 16-Oct-2026 14:30, local time
+const formatDateTime = (d) =>
+  `${pad(d.getDate())}-${MONTHS[d.getMonth()]}-${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-const addDataSheet = (wb, name, groups, rows) => {
-  const columns = groups.flatMap((g) => g.columns.map((c) => ({ ...c, group: g })));
-  const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', xSplit: 1, ySplit: 2 }] });
-  ws.columns = columns.map((c) => ({ key: c.key, width: c.width }));
-
-  // Row 1: one coloured band per group
-  let start = 1;
-  groups.forEach((g) => {
-    const end = start + g.columns.length - 1;
-    if (end > start) ws.mergeCells(1, start, 1, end);
-    const cell = ws.getCell(1, start);
-    cell.value = g.title.toUpperCase();
-    cell.fill = solid(g.color);
-    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    start = end + 1;
-  });
-  ws.getRow(1).height = 22;
-
-  // Row 2: column headers in the group's colour
-  const header = ws.getRow(2);
-  columns.forEach((c, i) => {
-    const cell = header.getCell(i + 1);
-    cell.value = c.header;
-    cell.font = { bold: true, color: { argb: argb(c.group.color) } };
-    cell.fill = solid(tint(c.group.color));
-    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    cell.border = { ...THIN_BORDER, bottom: { style: 'medium', color: { argb: argb(c.group.color) } } };
-  });
-  header.height = 44;
-  ws.autoFilter = { from: { row: 2, column: 1 }, to: { row: 2, column: columns.length } };
-
-  rows.forEach((data, r) => {
-    const row = ws.addRow(columns.map((c) => cellValue(c, data[c.key])));
-    columns.forEach((c, i) => {
-      const cell = row.getCell(i + 1);
-      const v = cell.value;
-      cell.border = THIN_BORDER;
-      if (r % 2 === 1) cell.fill = solid('faf4e6');
-      cell.alignment = { vertical: 'top', wrapText: !!c.wrap };
-      if (i === 0) cell.font = { bold: true };
-      if (c.type === 'money') {
-        cell.numFmt = '#,##0.00';
-        cell.alignment = { ...cell.alignment, horizontal: 'right' };
-        if (c.sign && v > 0) cell.font = { bold: true, color: { argb: argb('b91c1c') } };
-        if (c.sign && v < 0) cell.font = { bold: true, color: { argb: argb('15803d') } };
-      }
-      if (c.type === 'int') cell.alignment = { ...cell.alignment, horizontal: 'right' };
-      if (c.type === 'date') cell.numFmt = 'dd/mm/yyyy hh:mm';
-      const pill = c.pill && v != null ? c.pill(v) : null;
-      if (pill) {
-        cell.fill = solid(pill.fill);
-        cell.font = { bold: true, color: { argb: argb(pill.font) } };
-        cell.alignment = { ...cell.alignment, horizontal: 'center' };
-      }
-    });
-  });
-  return ws;
-};
-
-const addInfoSheet = (wb, info, layout, rowCount) => {
-  const ws = wb.addWorksheet('Report Info');
-  ws.columns = [{ width: 22 }, { width: 56 }];
-  ws.mergeCells('A1:B1');
-  const title = ws.getCell('A1');
-  title.value = 'GROUP MEDICAL COMPARISONS REPORT';
-  title.fill = solid(COLORS.comparison);
-  title.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
-  title.alignment = { vertical: 'middle', indent: 1 };
-  ws.getRow(1).height = 28;
-
-  const lines = [
-    ['Report', layout === 'plans' ? 'Plans (one row per plan)' : 'Comparisons (one row per comparison)'],
-    ['Generated', toExcelDate(info.generatedAt || new Date())],
-    ['Generated by', info.generatedBy || 'Unknown'],
-    ['Period', info.period || 'All time'],
-    ['Advisor', info.advisor || 'All advisors'],
-    ['Rows', rowCount],
-  ];
-  lines.forEach(([label, value], i) => {
-    const row = ws.getRow(i + 3);
-    row.getCell(1).value = label;
-    row.getCell(1).font = { bold: true, color: { argb: argb(COLORS.record) } };
-    row.getCell(2).value = value;
-    row.getCell(2).alignment = { horizontal: 'left' };
-    if (value instanceof Date) row.getCell(2).numFmt = 'dd/mm/yyyy hh:mm';
-    [1, 2].forEach((n) => { row.getCell(n).border = { bottom: thin }; });
-  });
-  return ws;
-};
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // layout: 'comparisons' (one row per comparison) or 'plans' (one per plan).
-// info: { generatedAt, generatedBy, period, advisor } for the Report Info sheet.
+// info: { generatedAt, generatedBy, period, advisor } for the notes under the title.
+// Returns the .xlsx as a Blob, and how many data rows it has.
 export function buildWorkbook(comparisons, layout, info = {}) {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = info.generatedBy || 'NSIB';
-  wb.created = new Date();
-  const rows = layout === 'plans' ? comparisons.flatMap(planRows) : comparisons.map(comparisonRow);
-  addDataSheet(wb, layout === 'plans' ? 'Plans' : 'Comparisons', layout === 'plans' ? PLAN_GROUPS : COMPARISON_GROUPS, rows);
-  addInfoSheet(wb, info, layout, rows.length);
-  return { workbook: wb, rowCount: rows.length };
-}
+  const isPlans = layout === 'plans';
+  const columns = isPlans ? PLAN_COLUMNS : COMPARISON_COLUMNS;
+  const data = isPlans ? comparisons.flatMap(planRows) : comparisons.map(comparisonRow);
+  const title = `NSIB Group Medical - ${isPlans ? 'Quotes by Plan' : 'Saved Comparisons'}`;
+  const count = isPlans
+    ? `${plural(data.length, 'plan')} from ${plural(comparisons.length, 'comparison')}`
+    : plural(data.length, 'comparison');
+  const generatedAt = info.generatedAt instanceof Date ? info.generatedAt : new Date();
 
+  const blob = buildReportXlsx({
+    sheetName: isPlans ? 'Plans' : 'Comparisons',
+    title,
+    notes: [
+      `Period: ${info.period || 'All time'}  ·  Created by: ${info.advisor || 'All advisors'}  ·  ${count}`,
+      `Generated ${formatDateTime(generatedAt)} by ${info.generatedBy || 'Unknown'}  ·  ` +
+        `Amounts in AED; ${isPlans ? 'Total Premium includes' : 'premiums include'} fees, levies and 5% VAT`,
+    ],
+    columns,
+    rows: data.map((row) => columns.map((c) => cellValue(c, row[c.key]))),
+  });
+  return { blob, rowCount: data.length };
+}
