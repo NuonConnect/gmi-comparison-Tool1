@@ -46,6 +46,9 @@ export const updateComparison = async (id, comparisonData, user) => {
     // server merge keeps the existing values.
     if (user?.id) incoming.user_id = user.id;
     if (user?.email) incoming.user_email = user.email;
+    if (user) {
+      incoming.lastEditedBy = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Unknown';
+    }
 
     const saveResponse = await fetch('/api/comparisons', {
       method: 'POST',

@@ -7,6 +7,8 @@ import TOBUploader from './TOBUploader';
 import EnquiryPicker from './EnquiryPicker';
 import { fileInWorkDrive } from '../utils/zoho';
 import { reportToPdf } from '../utils/reportPdf';
+import { calculatePlanTotals } from '../utils/planTotals';
+import { exportComparisons, describePeriod } from '../utils/comparisonExport';
 
 // ============================================================================
 // SECTION 1: CONSTANTS & DATA
@@ -2019,42 +2021,6 @@ const formatFieldValue = (value) => {
   }
   
   return formatted;
-};
-
-const calculatePlanTotals = (plan) => {
-  // Convert string values to numbers
-  const catAPremium = parseFloat(plan.catAPremium) || 0;
-  const catBPremium = parseFloat(plan.catBPremium) || 0;
-  const catCPremium = parseFloat(plan.catCPremium) || 0;
-  const catDPremium = parseFloat(plan.catDPremium) || 0;
-  const policyFee = parseFloat(plan.policyFee) || 0;
-  
-  const catATotal = plan.catAMembers * catAPremium;
-  const catBTotal = plan.catBMembers * catBPremium;
-  const catCTotal = plan.catCMembers * catCPremium;
-  const catDTotal = plan.catDMembers * catDPremium;
-  
-  const totalMembers = plan.catAMembers + plan.catBMembers + plan.catCMembers + plan.catDMembers;
-  const totalPremium = catATotal + catBTotal + catCTotal + catDTotal;
-  const pspFund = plan.dubaiMembers * 37;
-  const icpCharges = plan.northernEmiratesMembers * 24;
-  const vat = (totalPremium + pspFund + icpCharges + policyFee) * 0.05;
-  const grandTotal = totalPremium + pspFund + icpCharges + policyFee + vat;
-
-  return { 
-    ...plan, 
-    catAPremium, 
-    catBPremium, 
-    catCPremium, 
-    catDPremium, 
-    policyFee,
-    totalMembers, 
-    totalPremium, 
-    pspFund, 
-    icpCharges, 
-    vat, 
-    grandTotal 
-  };
 };
 
 const generateReferenceNumber = () => {
@@ -4329,12 +4295,14 @@ const toDateKey = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteComparison, onNewComparison, onBackToNormal, onRefresh }) => {
+  const { user } = useAuth();
   const [periodFilter, setPeriodFilter] = useState('all');   // all | thisMonth | lastMonth | onDate | range
   const [advisorFilter, setAdvisorFilter] = useState('all');
   const [specificDate, setSpecificDate] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [exporting, setExporting] = useState(null);         // null | comparisons | plans
 
   // Reset filters whenever the modal is (re)opened
   useEffect(() => {
@@ -4405,6 +4373,36 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
     }
   };
 
+  // Exports exactly what the filters show: one row per comparison, or one row
+  // per plan for pivot tables.
+  const handleExport = async (layout) => {
+    const filters = { periodFilter, specificDate, dateFrom, dateTo };
+    const generatedBy = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Unknown';
+    const advisor = advisorFilter === 'all' ? 'All advisors' : advisorFilter;
+    setExporting(layout);
+    try {
+      const result = await exportComparisons({
+        comparisons: filteredHistory,
+        layout,
+        filters,
+        info: { generatedAt: new Date(), generatedBy, advisor },
+      });
+      if (!result) return; // save dialog cancelled
+      await logActivity({
+        userName: generatedBy,
+        email: user?.email || null,
+        action: 'exported_comparisons',
+        timestamp: new Date().toISOString(),
+        details: { layout, rows: result.rowCount, period: describePeriod(filters), advisor },
+      });
+    } catch (error) {
+      console.error('Error exporting comparisons:', error);
+      alert('⚠️ Export failed: ' + (error?.message || 'unknown error'));
+    } finally {
+      setExporting(null);
+    }
+  };
+
   const statCards = [
     { label: 'TOTAL SAVED', value: totalSaved, box: 'bg-indigo-50 border-indigo-100', text: 'text-indigo-700' },
     { label: 'THIS MONTH', value: thisMonthCount, box: 'bg-green-50 border-green-100', text: 'text-green-700' },
@@ -4421,13 +4419,29 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
             <h2 className="text-2xl font-bold text-gray-900">Saved History</h2>
             <p className="text-sm text-gray-500 mt-1">👥 Shared across all advisors</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               onClick={handleRefresh}
               disabled={isRefreshing}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 transition text-sm disabled:opacity-60"
             >
               {isRefreshing ? '⏳ Refreshing…' : '🔄 Refresh'}
+            </button>
+            <button
+              onClick={() => handleExport('comparisons')}
+              disabled={filteredHistory.length === 0 || !!exporting}
+              title="One row per comparison, as filtered below"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-700 transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {exporting === 'comparisons' ? '⏳ Exporting…' : `⬇ Export (${filteredHistory.length})`}
+            </button>
+            <button
+              onClick={() => handleExport('plans')}
+              disabled={filteredHistory.length === 0 || !!exporting}
+              title="One row per plan in these comparisons, for pivot tables"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-700 transition text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {exporting === 'plans' ? '⏳ Exporting…' : '⬇ Plans'}
             </button>
             <button
               onClick={() => {
@@ -4465,7 +4479,7 @@ const HistoryManager = ({ isOpen, onClose, history, onLoadComparison, onDeleteCo
                 <option value="thisMonth">This month</option>
                 <option value="lastMonth">Last month</option>
                 <option value="onDate">On a specific date…</option>
-                <option value="range">Date range…</option>
+                <option value="range">Date range (from – to)…</option>
               </select>
             </div>
             {periodFilter === 'onDate' && (
